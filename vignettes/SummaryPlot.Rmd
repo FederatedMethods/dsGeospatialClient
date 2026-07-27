@@ -1,0 +1,221 @@
+---
+title: "SummaryPlot"
+output: github_document
+date: "2026-07-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = FALSE)
+
+```
+
+## Function summary
+
+Plots heatmap for lsoa level aggregate of selected variables on map. Uses modified ds.meanSdGp and MeanSdGpDS functions for lsoa level aggrgation. Default map setting from boundr package, future version accepts shapefile readable with st_read. Plotting done with library sf and ggplot2.
+
+Current testing done on synthetic health outcome data created by RVD. 
+
+```{r, include=FALSE}
+ message("Running chunk:1")
+# retrieve LSOA boundaries for Cheshire and Merseyside
+# to reduce coverage, remove names from the `within_names`
+
+cm_lsoa_sf <- boundr::bounds(
+  "lsoa",
+  within_level = "lad",
+  within_names = c(
+    "Cheshire East",
+    "Cheshire West and Chester",
+    "Halton",
+    "Knowsley",
+    "Liverpool",
+    "Sefton",
+    "St. Helens",
+    "Warrington",
+    "Wirral"
+  ),
+  lookup_year = 2011, # can be either 2011 or 2021
+  opts = boundr::boundr_options(resolution = "BFC")
+)
+
+liverpool_sf <- cm_lsoa_sf |>
+  dplyr::filter(lad22nm %in% "Liverpool")
+
+uprn_gs_sf <- "https://pldr.org/download/2k6r3/n12/UPRN_2_1_greenspace_distances_with_coords.csv" |>
+  readr::read_csv() |>
+  # convert to spatial object
+  sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  # add LSOA details
+  sf::st_join(cm_lsoa_sf)
+
+
+
+qof_asthma_tbl <- "https://pldr.org/download/e6nzv/ng1/QOF_4_03_Asthma_LSOA.csv" |>
+  readr::read_csv() |>
+  # filter out CM LSOAs
+  dplyr::filter(lsoa11 %in% cm_lsoa_sf$lsoa11cd) |>
+  # filter out last year
+  dplyr::filter(year == 2024)
+
+
+
+# set seed for reproducibility
+set.seed(20250603)
+qof_asthma_cohort_tbl <- qof_asthma_tbl |>
+  purrr::pmap(function(lsoa11, den, num, ...) {
+    # recalculate pop to be a multiple of 2
+    pop <- ifelse(den %% 2 != 0, den + 1, den)
+    # extract UPRNs for this LSOA
+    uprn_tbl <- uprn_gs_sf |>
+      sf::st_drop_geometry() |>
+      dplyr::filter(lsoa11cd == lsoa11) |>
+      dplyr::mutate(
+        dist_gs_dec = dplyr::ntile(distance_local_greenspace, 10)
+      ) |>
+      dplyr::arrange(dist_gs_dec)
+    
+    # create cohort table
+    cohort_tbl <- tibble::tibble(
+      lsoa11cd = lsoa11,
+      sex = rep(c(0, 1), each = pop / 2),
+      has_asthma = FALSE,
+      uprn = sample(uprn_tbl$UPRN, size = pop, replace = TRUE)
+    )
+    
+    # randomly assigned the outcome to `num` patients
+    idx <- sample(seq_len(pop), ceiling(num), replace = FALSE)
+    cohort_tbl$has_asthma[idx] <- TRUE
+    
+    # randomly re-assigned UPRNs with higher distances to patients with outcome
+    ## create vector of probabilities, so further distances are favoured
+    p <- c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2, 0.2, 0.2)
+    idx_uprn_tile <- sample(1:10, ceiling(num), replace = TRUE, prob = p)
+    ## subset UPRNs with match tile as per `idx_uprn_tile`
+    cohort_tbl$uprn[idx] <- purrr::map(idx_uprn_tile, function(x) {
+      # subset based on tile decile  
+      aux <- dplyr::filter(uprn_tbl, dist_gs_dec == x)
+      # extract UPRN
+      aux$UPRN[sample(seq_len(nrow(aux)), 1)]
+    }) |>
+      purrr::list_c()
+    
+    # return final cohort table
+    return(cohort_tbl)
+  }) |>
+  purrr::list_c()
+
+
+qof_asthma_cohort_dist_gs_sf <- qof_asthma_cohort_tbl |>
+  dplyr::left_join(uprn_gs_sf, by = c("uprn" = "UPRN", "lsoa11cd")) |>
+  dplyr::arrange(lsoa11cd, uprn) |>
+  sf::st_as_sf()
+```
+
+## Upload data and load back with DSLite.
+
+```{r}
+message("Running chunk:2")
+library(DSLite)
+library(devtools)
+library(dsBase)
+library(dsBaseClient)
+library(dsGeospatial)
+library(dsGeospatialClient)
+
+options(nfilter.tab = 3)
+
+dat <- qof_asthma_cohort_dist_gs_sf |> 
+  dplyr::select("lsoa11cd", "has_asthma","uprn","distance_local_greenspace") |> 
+  sf::st_drop_geometry()
+
+#devtools::load_all("/Users/tkariya/Documents/DataSHIELD/dsGeospatial")
+
+
+dslite.server1 <- newDSLiteServer(
+  tables = list(
+    uprn_asthma_green1 = dat
+  )
+)
+
+dslite.server2 <- newDSLiteServer(
+  tables = list(
+    uprn_asthma_green2 = dat
+  )
+)
+
+assign("dslite.server1", dslite.server1, envir = .GlobalEnv)
+assign("dslite.server2", dslite.server2, envir = .GlobalEnv)
+
+
+dslite.server1$config(defaultDSConfiguration(include=c("dsBase", "dsGeospatial")))
+dslite.server1$aggregateMethod("MeanSdGpDS", "MeanSdGpDS")
+
+dslite.server2$config(defaultDSConfiguration(include=c("dsBase", "dsGeospatial")))
+dslite.server2$aggregateMethod("MeanSdGpDS", "MeanSdGpDS")
+
+
+
+
+builder <- DSI::newDSLoginBuilder()
+
+builder$append(
+  server = "server_1",
+  url = "dslite.server1",
+  table = "uprn_asthma_green1",
+  driver = "DSLiteDriver"
+)
+
+builder$append(
+  server = "server_2",
+  url = "dslite.server2",
+  table = "uprn_asthma_green2",
+  driver = "DSLiteDriver"
+)
+
+
+logindata <- builder$build()
+
+
+conns <- DSI::datashield.login(logins = logindata, assign = FALSE)
+
+datashield.assign.table(conns, "D", logindata)
+
+```
+
+
+Set nfilter.tab 
+
+```{r}
+nfilter.tab  <- 3
+```
+
+## Modified meanSDGPDS
+
+modification: Convert object to numeric first and then find mean and var.
+
+
+## geoheatmap function
+
+Inputs : inputs of ds.meanSdGp and shapefile and names_region (when using boundr)
+Return : mean plot of selected variable. mean can be 'split' or 'combined' across studies.
+
+
+
+
+
+## Outputs
+```{r outputs}
+dsGeospatialClient::ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns)
+dsGeospatialClient::ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
+type='split')
+dsGeospatialClient::ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
+type='split', names_region = c("Liverpool", "Sefton"))
+dsGeospatialClient::ds.geoheatmapPlot(x="D$distance_local_greenspace", y = "D$lsoa11cd",
+datasources = conns)
+dsGeospatialClient::ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
+type = 'split', names_region = c("Liverpool", "Sefton"))
+```
+
+
+
+

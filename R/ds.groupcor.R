@@ -378,7 +378,7 @@ ds.groupcor <- function(x=NULL, y= NULL, index = NULL, type="split", datasources
             shape_list[[1]],
             correlation_data,
             by = "lsoa11cd"
-          ) %>% dplyr::mutate(server = "combine")
+          ) |> dplyr::mutate(server = "combine")
       }
 
     else{
