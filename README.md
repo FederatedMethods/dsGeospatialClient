@@ -1,12 +1,10 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# dsGeospatial
+# dsGeospatialClient : 
 
-**Privacy-preserving geospatial visualisation and analysis for health
+** Client-side package for privacy-preserving geospatial visualisation and analysis for health
 and environmental data in DataSHIELD**
-
-The goal of dsGeospatial is to …
 
 ## Installation
 
@@ -17,10 +15,12 @@ You can install the development version of dsGeospatial from
 # install.packages("pak")
 pak::pak("FederatedMethods/dsGeospatial")
 ```
+**dsGeospatialClient** is currently under active development.
+For a full list of development branches, checkout https://github.com/FederatedMethods/dsGeospatialClient/branches
 
-## Overview
+## About
 
-**dsGeospatial** is a DataSHIELD package that provides federated methods
+**dsGeospatialClient** is a DataSHIELD (https://www.datashield.org)) package that provides federated methods
 for the visualisation and spatial analysis of health and environmental
 data while preserving the privacy of individual-level records.
 
@@ -29,33 +29,11 @@ the **DARE UK** programme, with the aim of enabling secure,
 collaborative geospatial analyses across distributed datasets without
 transferring sensitive household-level data.
 
-Unlike conventional geospatial workflows, **dsGeospatial** performs all
+Unlike conventional geospatial workflows, **dsGeospatialClient** performs all
 computations within the secure DataSHIELD environment. Only
 non-disclosive summary statistics and visualisations are returned to the
-analyst, allowing organisations to collaboratively investigate spatial
-patterns and environmental-health relationships while maintaining data
-governance and confidentiality.
+analyst. A key point to highlight is that the dsGeospatialClient package (https://github.com/FederatedMethods/dsGeospatialClient/) needs to be used in conjunction with the dsGeospatial package (https://github.com/FederatedMethods/dsGeospatial) - trying to use one without the other makes no sense.
 
-## Motivation
-
-Many important public health questions require linking health outcomes
-with environmental exposures. The package can be used to investigate
-questions such as:
-
-- How does asthma prevalence vary with proximity to greenspace?
-- Which neighbourhoods have the highest average air pollution exposure?
-- Are environmental exposures distributed equally across socio-economic
-  groups?
-- Can spatial trends be reproduced across multiple organisations without
-  sharing household-level data?
-
-The datasets for such research are often held by different organisations
-and cannot be combined because of privacy, governance or legal
-constraints.
-
-**dsGeospatial** provides a federated analytical framework that enables
-these data to be explored safely without exposing household-level
-information.
 
 ## Features
 
@@ -79,24 +57,9 @@ Current and planned functionality includes:
 This is a basic example which shows you how to solve a common problem:
 
 ``` r
-library(dsGeospatial)
+library(dsGeospatialClient)
 ## basic example code
 ```
-
-## Privacy and disclosure protection
-
-All analyses are performed within the DataSHIELD framework.
-
-No individual-level health or environmental records leave the secure
-data repositories. Results returned to the analyst consist only of
-disclosure-controlled aggregated outputs that comply with DataSHIELD
-disclosure rules.
-
-## Development status
-
-**dsGeospatial** is currently under active development.
-
-Planned future capabilities include: * * \*
 
 ## Contributing
 
