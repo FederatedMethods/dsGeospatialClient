@@ -13,7 +13,7 @@ You can install the development version of dsGeospatial from
 
 ``` r
 # install.packages("pak")
-pak::pak("FederatedMethods/dsGeospatial")
+pak::pak("FederatedMethods/dsGeospatialClient")
 ```
 **dsGeospatialClient** is currently under active development.
 For a full list of development branches, checkout https://github.com/FederatedMethods/dsGeospatialClient/branches
