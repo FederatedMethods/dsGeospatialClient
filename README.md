@@ -3,7 +3,7 @@
 
 # dsGeospatialClient : 
 
-** Client-side package for privacy-preserving geospatial visualisation and analysis for health
+**Client-side package for privacy-preserving geospatial visualisation and analysis for health
 and environmental data in DataSHIELD**
 
 ## Installation
