@@ -346,28 +346,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     stvar.all.unique.levels.transmit<-NULL
   }
   
-  #ASSIGN TABLE TO SERVERSIDE IF REQUIRED
-  if(table.assign)
-  {
-    
-    if(is.null(newobj))
-    {
-      newobj<-"table.newobj"
-    }
-    
-    
-    # CALL THE MAIN SERVER SIDE ASSIGN FUNCTION
-    
-    calltext.assign <- call("tableDS.assign", rvar.transmit=rvar.transmit, cvar.transmit=cvar.transmit,
-                            stvar.transmit=stvar.transmit, rvar.all.unique.levels.transmit=rvar.all.unique.levels.transmit,
-                            cvar.all.unique.levels.transmit=cvar.all.unique.levels.transmit,
-                            stvar.all.unique.levels.transmit=stvar.all.unique.levels.transmit,
-                            exclude.transmit=exclude.transmit, useNA.transmit=useNA.transmit
-    )
-    
-    
-    DSI::datashield.assign(datasources, newobj, calltext.assign)
-  }
+
   
   # CALL THE MAIN SERVER SIDE AGGREGATE FUNCTION
   
@@ -396,11 +375,11 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   
   #Check whether return is a table or an error message
-  valid.output<-rep(1,numsources.orig)
-  error.messages<-table.out
-  sum.valid<-0
-  study.names.valid<-NULL
-  list.temp<-NULL
+  valid.output <- rep(1, numsources.orig)
+  error.messages <- table.out
+  sum.valid <- 0
+  study.names.valid <- NULL
+  list.temp <- NULL
   
   
   for(ns in 1:numsources.orig)
@@ -416,13 +395,13 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     }
   }
   
-  num.valid.studies<-sum(valid.output)
+  num.valid.studies <- sum(valid.output)
   
   
   if(num.valid.studies==0)
   {
-    if ((! table.assign) || report.chisq.tests)
-    {
+    # if ((! table.assign) || report.chisq.tests)
+     #{
       validity.message<-"All studies failed for reasons identified below"
       message("\n",validity.message,"\n\n")
       for(ns in 1:numsources.orig)
@@ -431,11 +410,11 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
       }
       
       return(list(validity.message=validity.message,error.messages=error.messages))
-    }
-    else
-    {
-      return(NULL)
-    }
+    #}
+    # else
+    # {
+    #   return(NULL)
+    # }
   }
   
   
@@ -466,7 +445,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   
   
-  if(num.valid.studies>0&&num.valid.studies<numsources.orig)
+  if(num.valid.studies > 0 && num.valid.studies<numsources.orig)
   {
     validity.message<-"At least one study failed for reasons identified by 'error.messages':"
     
@@ -490,15 +469,15 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   if(num.valid.studies==numsources.orig)
   {
     validity.message<-"Data in all studies were valid"
-    if (! table.assign)
-    {
+    # if (! table.assign)
+    # {
       message("\n",validity.message,"\n")
       for(ns in 1:numsources.orig)
       {
         message("\nStudy",ns,": ",error.messages[[ns]])
       }
       message("\n\n")
-    }
+    #}
   }
   
   #check all tables from all sources have the same number of dimensions
@@ -754,11 +733,6 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
         
         dimnames(array.all.sources)[4]<-list(as.character(1:numsources))
         #print(array.all.sources)
-        
-        
-        
-        
-        
       }#end of tables not identical loop
       
     }#end of ns loop
@@ -789,424 +763,17 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   ######################################################################
   
-  #Next work with two dimensional tables
-  if(num.table.dims==2)
-  {
-    
-    #identify all possible values of each dimension
-    
-    rvar.dimnames<-NULL
-    cvar.dimnames<-NULL
-    
-    for(ns in 1:numsources)
-    {
-      rvar.dimnames<-c(rvar.dimnames,dimnames(table.out[[ns]])$rvar)
-      rvar.dimnames[is.na(rvar.dimnames)]<-"NA"
-      cvar.dimnames<-c(cvar.dimnames,dimnames(table.out[[ns]])$cvar)
-      cvar.dimnames[is.na(cvar.dimnames)]<-"NA"
-    }
-    
-    rvar.dimnames.unique<-unique(rvar.dimnames)
-    cvar.dimnames.unique<-unique(cvar.dimnames)
-    
-    
-    numcells.all.sources<-length(rvar.dimnames.unique)*length(cvar.dimnames.unique)
-    
-    empty.table.all.sources.col.1<-rep(rvar.dimnames.unique,times=(length(cvar.dimnames.unique)))
-    empty.table.all.sources.col.1
-    
-    empty.table.all.sources.col.2<-rep(cvar.dimnames.unique,each=length(rvar.dimnames.unique))
-    empty.table.all.sources.col.2
-    
-    empty.table.all.sources.col.3<-rep(0,times=(length(rvar.dimnames.unique)*length(cvar.dimnames.unique)))
-    empty.table.all.sources.col.3
-    
-    empty.table.all.sources<-cbind(empty.table.all.sources.col.1,empty.table.all.sources.col.2,
-                                   empty.table.all.sources.col.3)
-    
-    
-    empty.table.all.sources[is.na(empty.table.all.sources)]<-"NA"
-    
-    #print(empty.table.all.sources) #1 table length 36 empty values
-    
-    
-    
-    dim.vector.all.sources<-c(length(rvar.dimnames.unique),length(cvar.dimnames.unique),numsources)
-    
-    array.all.sources<-array(data=NA,dim=dim.vector.all.sources,
-                             dimnames=list(rvar.dimnames.unique,cvar.dimnames.unique,NULL))
-    
-    names(dimnames(array.all.sources))<-c(rvar,cvar,"study")
-    #print(array.all.sources) #length 108 all NAs so the study specific template for dimnames
-    #has been correctly expanded to
-    #include all studies
-    
-    #KEY LOOP
-    for(ns in 1:numsources)
-    {
-      #start with study 1 then 2 etc etc
-      
-      numcells<-length(table.out[[ns]])
-      #print(numcells)
-      study.specific.dim.vect<-dim(table.out[[ns]])
-      study.specific.dim.vect
-      
-      count.in.cell<-rep(NA,numcells)
-      cvar.mark<-rep("",numcells)
-      rvar.mark<-rep("",numcells)
-      cells.so.far<-0
-      
-      
-      for(cc in 1:study.specific.dim.vect[2])
-      {
-        for(rr in 1:study.specific.dim.vect[1])
-        {
-          cells.so.far<-cells.so.far+1
-          count.in.cell[cells.so.far]<-table.out[[ns]][cells.so.far]
-          rvar.mark[cells.so.far]<-rvar.dimnames[rr]
-          cvar.mark[cells.so.far]<-cvar.dimnames[cc]
-        }
-      }
-      
-      
-      
-      table.current.study<-cbind(rvar.mark,cvar.mark,count.in.cell)
-      table.current.study[is.na(table.current.study)]<-"NA"
-      #message("current study =",ns)
-      #print(table.current.study)
-      
-      
-      array.current.study<-array(data=table.current.study[,3],dim=dim.vector.all.sources[1:2],
-                                 dimnames=list(rvar.dimnames.unique,cvar.dimnames.unique))
-      names(dimnames(array.current.study))<-c(rvar,cvar)
-      #array.current.study
-      
-      #IS TABLE FOR CURRENT STUDY IDENTICAL IN STRUCTURE TO EMPTY TABLE OVERALL?
-      
-      etas<-as.vector(empty.table.all.sources[,1:2])
-      tss<-as.vector(table.current.study[,1:2])
-      
-      tables.identical<-FALSE
-      
-      if((sum(etas==tss))==length(etas))tables.identical<-TRUE
-      
-      #if the table structure is identical to the structure of the empty table from all sources
-      #then simply write the counts from the study specific table to the empty table from all sources
-      #and then that becomes the study.specific.table for the given study
-      
-      #if structure not identical match rows in study specific table to rows in array.all.sources using
-      #the dimnames.x.num to index the equivalent rows then the dimnames.x to check
-      
-      if(tables.identical)
-      {
-        #array.all.sources[,,,ns]<-array.current.study
-      }
-      
-      #if(!tables.identical)
-      {
-        #set up sequential numeric code for each of the sorted unique values in each dimnames
-        dimnames.1<-dimnames(array.all.sources)[[1]]
-        dimnames.1.num<-1:length(dimnames.1)
-        #cbind(dimnames.1,dimnames.1.num)
-        
-        dimnames.2<-dimnames(array.all.sources)[[2]]
-        dimnames.2.num<-1:length(dimnames.2)
-        #cbind(dimnames.2,dimnames.2.num)
-        
-        
-        #Map row in table from current study with equivalent row in array containing unique
-        #values from every study and check that the identified row in the full array contains
-        #the same dimnames values as the row in the current study table. If it does not,
-        #then rather than trying to second guess all possible ways this could go wrong
-        #simply stop processing and ask user to work with study specific tables to
-        #create table statistics he/she requires
-        
-        index.current.study<-rep(NA,length(table.current.study[,1]))
-        index.overall<-rep(NA,(dim.vector.all.sources[1]*dim.vector.all.sources[2]))
-        
-        for(oo in 1:length(table.current.study[,1]))
-        {
-          d1<-table.current.study[oo,1]
-          n1<-dimnames.1.num[dimnames.1==d1]
-          
-          d2<-table.current.study[oo,2]
-          n2<-dimnames.2.num[dimnames.2==d2]
-          
-          index.current.study<-oo
-          
-          #index.overall applies to empty.table.all.sources.col.1 etc which are all of length dim1*dim2*dim3 because
-          #this was created before array.all.sources was replicated to include space for all studies. So calculations
-          #of index.overall do not need to take account of ns value
-          
-          index.overall<-n1+dim.vector.all.sources[1]*(n2-1)
-          #                dim.vector.all.sources[1]*dim.vector.all.sources[2]*(n3-1)
-          
-          
-          count.current.study.current.row<-table.current.study[oo,3]
-          
-          #check dimnames all match
-          d1.a<-empty.table.all.sources.col.1[index.overall]
-          
-          d2.a<-empty.table.all.sources.col.2[index.overall]
-          
-          
-          #test effect of discrepency
-          #   d1<-"999"
-          
-          if(d1.a!=d1||d2.a!=d2)
-          {
-            return.message=  "Dimensions of tables not behaving sensibly across studies.Please check the data in each study and calculate counts and percentages, yourself, using the counts from the individual studies"
-            message(return.message)
-            return(return.message) 
-          }
-          
-          #dimension markers match so allocate count to correct cell
-          
-          #index.overall.extended.over.all.studies applies to array.all.sources which is of length dim1*dim2*dim3*numsources
-          #must therefore add dim.vector.all.sources[1]*dim.vector.all.sources[2]*dim.vector.all.sources[3]*(ns-1)
-          #to identify correct row in extended array which has the full dimnames structure replicated for each study
-          
-          index.overall.extended.over.all.studies<-index.overall+
-            dim.vector.all.sources[1]*dim.vector.all.sources[2]*(ns-1)
-          
-          array.all.sources[index.overall.extended.over.all.studies]<-count.current.study.current.row
-        }
-        
-        dimnames(array.all.sources)[3]<-list(as.character(1:numsources))
-        #print(array.all.sources)
-        
-        
-        
-        
-        
-      }#end of tables not identical loop
-      
-    }#end of ns loop
-    
-    
-    #Combine across studies if requested
-    ####################################
-    
-    combine.array.all.sources<-as.numeric(array.all.sources[,,1])
-    
-    if(numsources>1)
-    {
-      for(ns in 2:numsources)
-      {
-        combine.array.all.sources<-combine.array.all.sources+as.numeric(array.all.sources[,,ns])
-      }
-    }
-    
-    combine.array.all.sources<-array(data=combine.array.all.sources,dim=dim(array.all.sources)[1:num.table.dims],
-                                     dimnames=dimnames(array.all.sources)[1:num.table.dims])
-    #print(combine.array.all.sources)
-    
-    ######################
-    
-    #return(array.all.sources)
-    
-    
-  }#end of 2 dims loop
-  
-  ######################################################################
-  
-  #Next work with one dimensional tables
-  if(num.table.dims==1)
-  {
-    
-    #identify all possible values of each dimension
-    
-    rvar.dimnames<-NULL
-    
-    
-    for(ns in 1:numsources)
-    {
-      rvar.dimnames<-c(rvar.dimnames,dimnames(table.out[[ns]])$rvar)
-      rvar.dimnames[is.na(rvar.dimnames)]<-"NA"
-    }
-    
-    rvar.dimnames.unique<-unique(rvar.dimnames)
-    
-    numcells.all.sources<-length(rvar.dimnames.unique)
-    
-    empty.table.all.sources.col.1<-rvar.dimnames.unique
-    empty.table.all.sources.col.1
-    
-    empty.table.all.sources.col.2<-rep(0,times=(length(rvar.dimnames.unique)))
-    empty.table.all.sources.col.2
-    
-    empty.table.all.sources<-cbind(empty.table.all.sources.col.1,empty.table.all.sources.col.2)
-    
-    
-    empty.table.all.sources[is.na(empty.table.all.sources)]<-"NA"
-    
-    #print(empty.table.all.sources) #1 table length 36 empty values
-    
-    
-    
-    dim.vector.all.sources<-c(length(rvar.dimnames.unique),numsources)
-    
-    array.all.sources<-array(data=NA,dim=dim.vector.all.sources,
-                             dimnames=list(rvar.dimnames.unique,NULL))
-    
-    names(dimnames(array.all.sources))<-c(rvar,"study")
-    
-    #KEY LOOP
-    for(ns in 1:numsources)
-    {
-      #start with study 1 then 2 etc etc
-      
-      numcells<-length(table.out[[ns]])
-      #print(numcells)
-      study.specific.dim.vect<-dim(table.out[[ns]])
-      study.specific.dim.vect
-      
-      count.in.cell<-rep(NA,numcells)
-      rvar.mark<-rep("",numcells)
-      cells.so.far<-0
-      
-      
-      
-      for(rr in 1:study.specific.dim.vect[1])
-      {
-        cells.so.far<-cells.so.far+1
-        count.in.cell[cells.so.far]<-table.out[[ns]][cells.so.far]
-        rvar.mark[cells.so.far]<-rvar.dimnames[rr]
-      }
-      
-      
-      
-      
-      table.current.study<-cbind(rvar.mark,count.in.cell)
-      table.current.study[is.na(table.current.study)]<-"NA"
-      #message("current study =",ns)
-      #print(table.current.study)
-      
-      
-      array.current.study<-array(data=table.current.study[,2],dim=dim.vector.all.sources[1],
-                                 dimnames=list(rvar.dimnames.unique))
-      names(dimnames(array.current.study))<-c(rvar)
-      
-      #IS TABLE FOR CURRENT STUDY IDENTICAL IN STRUCTURE TO EMPTY TABLE OVERALL?
-      
-      etas<-as.vector(empty.table.all.sources[,1])
-      tss<-as.vector(table.current.study[,1])
-      
-      tables.identical<-FALSE
-      
-      if((sum(etas==tss))==length(etas))tables.identical<-TRUE
-      
-      #if the table structure is identical to the structure of the empty table from all sources
-      #then simply write the counts from the study specific table to the empty table from all sources
-      #and then that becomes the study.specific.table for the given study
-      
-      #if structure not identical match rows in study specific table to rows in array.all.sources using
-      #the dimnames.x.num to index the equivalent rows then the dimnames.x to check
-      
-      if(tables.identical)
-      {
-        #array.all.sources[,,,ns]<-array.current.study
-      }
-      
-      #if(!tables.identical)
-      {
-        #set up sequential numeric code for each of the sorted unique values in each dimnames
-        dimnames.1<-dimnames(array.all.sources[])[[1]]
-        dimnames.1.num<-1:length(dimnames.1)
-        
-        
-        #Map row in table from current study with equivalent row in array containing unique
-        #values from every study and check that the identified row in the full array contains
-        #the same dimnames values as the row in the current study table. If it does not,
-        #then rather than trying to second guess all possible ways this could go wrong
-        #simply stop processing and ask user to work with study specific tables to
-        #create table statistics he/she requires
-        
-        index.current.study<-rep(NA,length(table.current.study[,1]))
-        index.overall<-rep(NA,(dim.vector.all.sources[1]))
-        
-        for(oo in 1:length(table.current.study[,1]))
-        {
-          d1<-table.current.study[oo,1]
-          n1<-dimnames.1.num[dimnames.1==d1]
-          
-          index.current.study<-oo
-          
-          #index.overall applies to empty.table.all.sources.col.1 etc which are all of length dim1*dim2*dim3 because
-          #this was created before array.all.sources was replicated to include space for all studies. So calculations
-          #of index.overall do not need to take account of ns value
-          
-          index.overall<-n1
-          #                +dim.vector.all.sources[1]*(n2-1)
-          #                dim.vector.all.sources[1]*dim.vector.all.sources[2]*(n3-1)
-          
-          
-          count.current.study.current.row<-table.current.study[oo,2]
-          
-          #check dimnames all match
-          d1.a<-empty.table.all.sources.col.1[index.overall]
-          
-          
-          if(d1.a!=d1)
-          {
-            return.message=  "Dimensions of tables not behaving sensibly across studies.Please check the data in each study and calculate counts and percentages, yourself, using the counts from the individual studies"
-            message(return.message)
-            return(return.message) 
-          }
-          
-          #dimension markers match so allocate count to correct cell
-          
-          #index.overall.extended.over.all.studies applies to array.all.sources which is of length dim1*dim2*dim3*numsources
-          #must therefore add dim.vector.all.sources[1]*dim.vector.all.sources[2]*dim.vector.all.sources[3]*(ns-1)
-          #to identify correct row in extended array which has the full dimnames structure replicated for each study
-          
-          index.overall.extended.over.all.studies<-index.overall+
-            dim.vector.all.sources[1]*(ns-1)
-          
-          array.all.sources[index.overall.extended.over.all.studies]<-count.current.study.current.row
-        }
-        
-        dimnames(array.all.sources)[2]<-list(as.character(1:numsources))
-        #print(array.all.sources)
-        
-      }#end of tables not identical loop
-      
-    }#end of ns loop
-    
-    
-    
-    #Combine across studies if requested
-    ####################################
-    
-    combine.array.all.sources<-as.numeric(array.all.sources[,1])
-    
-    if(numsources>1)
-    {
-      for(ns in 2:numsources)
-      {
-        combine.array.all.sources<-combine.array.all.sources+as.numeric(array.all.sources[,ns])
-      }
-    }
-    
-    combine.array.all.sources<-array(data=combine.array.all.sources,dim=dim(array.all.sources)[1:num.table.dims],
-                                     dimnames=dimnames(array.all.sources)[1:num.table.dims])
-    
-    
-    
-  }#end of 1 dims loop
-  
-  ######################
   #clean and process output tables
-  
+
   array.all.sources.temp<-array.all.sources
   
   array.all.sources<-as.numeric(array.all.sources.temp)
   
   array.all.sources<-array(data=array.all.sources,dim=dim(array.all.sources.temp),
                            dimnames=dimnames(array.all.sources.temp))
-  
+
   output.text.temp<-paste0(",TABLES.COMBINED_all.sources_counts=combine.array.all.sources)")
-  
+
   for(ns in numsources:1)
   {
     name.array.study<-paste0("array.study.",ns)
@@ -1217,7 +784,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     
     output.text.temp<-paste0(",TABLE_STUDY.",study.names.valid[ns],"_counts=array.study.",ns,output.text.temp)
   }
-  
+
 
   ##################################################
   #NOW MOVE TO CALCULATE ROW AND COLUMN PROPORTIONS#
@@ -1230,7 +797,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   if(num.table.dims==3)
   {
     #start with combined table				  
-    
+
     combine.array.all.sources.row.props<-combine.array.all.sources
     combine.array.all.sources.col.props<-combine.array.all.sources
     
@@ -1265,6 +832,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     #######################	
     #study specific tables#
     #######################
+  
     for(ns in numsources:1)
     {
       #	name.array.study<-paste0("array.study.",ns)
@@ -1334,206 +902,14 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     eval(parse(text=output.text.props.counts))
     
     return.list.first<-list(output.list=output.list,validity.message=validity.message)
-    if(!report.chisq.tests&&!table.assign)
-    {
-      return(return.list.first)
-    }
+    # if(!report.chisq.tests&&!table.assign)
+    # {
+    #  return(return.list.first)
+    #}
   
   }#END second dim=3 loop
 
-  ##########################
-  #TABLES WITH 2 DIMENSIONS#
-  ##########################
-  if(num.table.dims==2)
-  {
-    #start with combined table				  
-    
-    combine.array.all.sources.row.props<-combine.array.all.sources
-    combine.array.all.sources.col.props<-combine.array.all.sources
-    
-    
-    numrows<-dim(combine.array.all.sources[,])[1]
-    numcols<-dim(combine.array.all.sources[,])[2]
-    
-    for(nr in 1:numrows)
-    {
-      sum.row<-sum(combine.array.all.sources[nr,],na.rm=TRUE)
-      combine.array.all.sources.row.props[nr,]<-signif(combine.array.all.sources[nr,]/sum.row,3)
-    }
-    
-    for(nc in 1:numcols)
-    {
-      sum.col<-sum(combine.array.all.sources[,nc],na.rm=TRUE)
-      combine.array.all.sources.col.props[,nc]<-signif(combine.array.all.sources[,nc]/sum.col,3)
-    }
-    
-    
-    
-    
-    calltext2<-paste0("TABLE.COMBINED_row.props<-combine.array.all.sources.row.props")
-    calltext3<-paste0("TABLE.COMBINED_col.props<-combine.array.all.sources.col.props")
-    
-    eval(parse(text=calltext2))
-    eval(parse(text=calltext3))
-    
-    
-    #######################	
-    #study specific tables#
-    #######################
-    for(ns in numsources:1)
-    {
-      #	name.array.study<-paste0("array.study.",ns)
-      commas.vect<-rep(",",num.table.dims)
-      commas.vect<-paste(commas.vect,collapse="")
-      calltext<-paste0("study.specific.table<-array.all.sources[",commas.vect,ns,"]")
-      eval(parse(text=calltext))
-      
-      study.specific.table.row.props<-study.specific.table
-      study.specific.table.col.props<-study.specific.table
-      
-      
-      
-      numrows<-dim(study.specific.table[,])[1]
-      numcols<-dim(study.specific.table[,])[2]
-      
-      
-      for(nr in 1:numrows)
-      {
-        sum.row<-sum(study.specific.table[nr,],na.rm=TRUE)
-        study.specific.table.row.props[nr,]<-signif(study.specific.table[nr,]/sum.row,3)
-      }
-      for(nc in 1:numcols)
-      {
-        sum.col<-sum(study.specific.table[,nc],na.rm=TRUE)
-        study.specific.table.col.props[,nc]<-signif(study.specific.table[,nc]/sum.col,3)
-      }
-      
-      
-      calltext4<-paste0("TABLE.STUDY_row.props.",ns,"<-study.specific.table.row.props")
-      calltext5<-paste0("TABLE.STUDY_col.props.",ns,"<-study.specific.table.col.props")
-      
-      #print(calltext4)
-      #print(calltext5)
-      
-      eval(parse(text=calltext4))
-      eval(parse(text=calltext5))
-      
-    }
-    
-    
-    output.text.temp<-paste0(",TABLES.COMBINED_all.sources_row.props=TABLE.COMBINED_row.props,
-						   TABLES.COMBINED_all.sources_col.props=TABLE.COMBINED_col.props",
-                             output.text.temp)
-    
-    
-    for(ns in numsources:1)
-    {
-      if(ns>1)
-      {	
-        output.text.temp<-paste0(",TABLE.STUDY.",study.names.valid[ns],"_row.props=TABLE.STUDY_row.props.",ns,",",
-                                 "TABLE.STUDY.",study.names.valid[ns],"_col.props=TABLE.STUDY_col.props.",ns,
-                                 output.text.temp)
-        #print(output.text.temp)
-        
-      }
-      else	
-      {
-        output.text.temp<-
-          paste0("TABLE.STUDY.",study.names.valid[ns],"_row.props=TABLE.STUDY_row.props.",ns,",",
-                 "TABLE.STUDY.",study.names.valid[ns],"_col.props=TABLE.STUDY_col.props.",ns,
-                 output.text.temp)
-      }
-    }
-    
-    output.text.props.counts.dim.2<-paste0("output.list=list(",output.text.temp)
-    eval(parse(text=output.text.props.counts.dim.2))
-    
-    return.list.first<-list(output.list=output.list,validity.message=validity.message)
-    
-    if(!report.chisq.tests&&!table.assign)
-    {
-      return(return.list.first)
-    }
-    
-  }#END second dim=2 loop
-  
-  
-  ##########################
-  #TABLES WITH 1 DIMENSIONS#
-  ##########################
 
-  if(num.table.dims==1)
-  {
-    #start with combined table				  
-    
-    combine.array.all.sources.col.props<-combine.array.all.sources
-    
-    numcols<-length(combine.array.all.sources)
-    
-    for(nc in 1:numcols)
-    {
-      sum.col<-sum(combine.array.all.sources,na.rm=TRUE)
-      combine.array.all.sources.col.props<-signif(combine.array.all.sources/sum.col,3)
-    }
-    
-    
-    
-    
-    calltext3<-paste0("TABLE.COMBINED_col.props<-combine.array.all.sources.col.props")
-    
-    eval(parse(text=calltext3))
-    
-    
-    ########################	
-    #rvar by source tables #
-    ########################
-    
-    array.all.sources_counts<-array.all.sources
-    array.all.sources_row.props<-array.all.sources
-    array.all.sources_col.props<-array.all.sources
-    
-    numrows<-dim(array.all.sources)[1]
-    numcols<-dim(array.all.sources)[2]
-    
-    row.sum<-rep(NA,numrows)
-    col.sum<-rep(NA,numcols)
-    
-    for(nr in 1:numrows)
-    {
-      row.sum[nr]<-sum(array.all.sources[nr,],na.rm=TRUE)
-      array.all.sources_row.props[nr,]<-array.all.sources[nr,]/row.sum[nr]
-    }
-    
-    
-    for(nc in 1:numcols)
-    {
-      col.sum[nc]<-sum(array.all.sources[,nc],na.rm=TRUE)
-      array.all.sources_col.props[,nc]<-array.all.sources[,nc]/col.sum[nc]
-    }
-    
-    dimnames(array.all.sources_counts)[2]<-list(study.names.valid)
-    
-    dimnames(array.all.sources_col.props)[2]<-list(study.names.valid)
-    
-    dimnames(array.all.sources_row.props)[2]<-list(study.names.valid)
-    
-    output.list<-list(
-      TABLE_rvar.by.study_row.props=array.all.sources_row.props,
-      TABLE_rvar.by.study_col.props=array.all.sources_col.props,
-      TABLE_rvar.by.study_counts=array.all.sources_counts,
-      TABLES.COMBINED_all.sources_proportions=TABLE.COMBINED_col.props,
-      TABLES.COMBINED_all.sources_counts=combine.array.all.sources)
-    
-    return.list.first<-list(output.list=output.list,validity.message=validity.message)
-    
-    if(!report.chisq.tests&&!table.assign)
-    {
-      return(return.list.first)
-    }
-    
-    
-  }#END second dim=1 loop
-  
   #################################################
   # Setup on.exit() to restore options 'warn' value
   #################################################
@@ -1545,8 +921,8 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   #NOW UNDERTAKE CHISQUARED TESTS#
   ################################
 
-  if(report.chisq.tests)
-  {
+  # if(report.chisq.tests)
+  # {
     ##########################
     #TABLES WITH 3 DIMENSIONS#
     ##########################
@@ -1625,178 +1001,59 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
       
       return.list.second<-list(output.list=return.list.first,chisq.tests=chisq.tests,validity.message=validity.message)
 
-      if(!table.assign)
-      {
-        return(return.list.second)
-      }
+      # if(!table.assign)
+      # {
+      #   return(return.list.second)
+      # }
  
     }
     #END third dim=3 loop
-    ##########################
-    #TABLES WITH 2 DIMENSIONS#
-    ##########################
-    #Suppress.chisq.warnings by default
-    if(suppress.chisq.warnings)
-    {
-      options(warn=-1)
-    }
+   
     
-    ##################
-    #Combined studies#
-    ##################
-    
-    if(num.table.dims==2){
-      
-      chisq.list.temp<-")"
-      
-      chisqtext<-paste0("chisq.test_TABLES.COMBINED<-stats::chisq.test(combine.array.all.sources)")
-      eval(parse(text=chisqtext))
-      chisq.list.temp<-paste0(",chisq.test_TABLES.COMBINED_all.sources_counts=chisq.test_TABLES.COMBINED",chisq.list.temp)	
-      
-      
-      
-      ##################
-      #Separate studies#
-      ##################
-      
-      
-      for(ns in numsources:1)
-      {
-        input.calltext<-paste0("input.array.source.specific<-array.study.",ns)
-        eval(parse(text=input.calltext))
-        
-        numtests<-dim(input.array.source.specific)[num.table.dims]
-        
-        if(ns>1)
-        {
-          chisqtext<-paste0("chisq.test_TABLE.STUDY.",ns,"_counts<-stats::chisq.test(input.array.source.specific)")
-          eval(parse(text=chisqtext))
-          chisq.list.temp<-paste0(",chisq.test_TABLE.STUDY.",study.names.valid[ns],"_counts=chisq.test_TABLE.STUDY.",ns,"_counts",chisq.list.temp)	
-        }
-        else
-        {
-          chisqtext<-paste0("chisq.test_TABLE.STUDY.",ns,"_counts<-stats::chisq.test(input.array.source.specific)")
-          eval(parse(text=chisqtext))
-          chisq.list.text<-paste0("chisq.tests<-list(chisq.test_TABLE.STUDY.",study.names.valid[ns],"_counts=chisq.test_TABLE.STUDY.",ns,"_counts",chisq.list.temp)
-        }
-        
-      }#END ns loop
-      
-      #If warnings suppressed now return to default
-      if(suppress.chisq.warnings)
-      {
-        options(warn=0)
-      }
-      
-      
-      eval(parse(text=chisq.list.text))
-      
-      return.list.second<-list(output.list=return.list.first,chisq.tests=chisq.tests,validity.message=validity.message)
-      
-      if(!table.assign)
-      {
-        return(return.list.second)
-      }
-      
-      
-      
-    }#END third dim=2 loop
-    
-    #########################
-    #TABLES WITH 1 DIMENSION#
-    #########################
-    #Suppress.chisq.warnings by default
-    if(suppress.chisq.warnings)
-    {
-      options(warn=-1)
-    }
-    
-    if(num.table.dims==1){
-      
-      #combined.studies.not.possible.as.one.column.only
-      
-      ##################
-      #Separate studies#
-      ##################
-      
-      
-      
-      chisq.1D.temp<-")"
-      
-      
-      
-      for(ns in numsources:1)
-      {
-        
-        if(ns>1)
-        {
-          chisq.1D.temp<-paste0(",array.all.sources[,",ns,"]",chisq.1D.temp)
-        }
-        else
-        {
-          chisq.1D.text<-paste0("rvar.by.study_counts<-cbind(array.all.sources[,",ns,"]",chisq.1D.temp)	
-        }
-        
-        
-      }#END ns loop
-      
-      #	print(chisq.1D.text)
-      
-      rvar.by.study_counts <- NULL
-      eval(parse(text=chisq.1D.text))
-      
-      chisq.test_rvar.by.study_counts<-stats::chisq.test(rvar.by.study_counts)
-      
-      
-      output.list<-list(
-        TABLE_rvar.by.study_row.props=array.all.sources_row.props,
-        TABLE_rvar.by.study_col.props=array.all.sources_col.props,
-        TABLE_rvar.by.study_counts=array.all.sources_counts,
-        TABLES.COMBINED_all.sources_proportions=TABLE.COMBINED_col.props,
-        TABLES.COMBINED_all.sources_counts=combine.array.all.sources
-      )
-      
-      chisq.tests=list(CHISQ.TEST_rvar.by.study_counts=chisq.test_rvar.by.study_counts)
-      
-      return.list.second<-list(output.list=return.list.first,chisq.tests=chisq.tests,validity.message=validity.message)
-      
-      if(!table.assign)
-      {
-        return(return.list.second)
-      }
-      
-      
-      #If warnings suppressed now return to default
-      if(suppress.chisq.warnings)
-      {
-        options(warn=0)
-      }
-      
-      
-    }#END third dim=1 loop
-    ####was }
-    if(table.assign)
-    {
-      # CALL THE SECOND MAIN SERVER SIDE AGGREGATE FUNCTION
-      
-      calltext <- call("tableDS2", newobj=newobj,rvar.transmit=rvar.transmit, cvar.transmit=cvar.transmit,
-                       stvar.transmit=stvar.transmit)
-      
-      serverside.table.out<-DSI::datashield.aggregate(datasources, calltext)
+  #}
+  browser()
 
-      if(report.chisq.tests)
-      {
-        return.list.final<-list(serverside.table.structure=serverside.table.out,outlist=return.list.second)
-      }
-      else
-      {
-        return.list.final<-list(serverside.table.structure=serverside.table.out,outlist=return.list.first)
-      }
-      return(return.list.final)
-    }
+  #return.chisq <- return.list.second$chisq.tests$chisq.test_TABLES.COMBINED_all.sources_counts_table
+  
+  # Plotting 
+  if(plot){
+  
+  combined_tests <- dt$chisq.tests[
+    grep(
+      "^chisq\\.test_TABLES\\.COMBINED_all\\.sources_counts_table\\.",
+      names(dt$chisq.tests)
+    )
+  ]
+  
+  seperate_tests <- dt$chisq.tests[
+    grep(
+      "^chisq\\.test_TABLES\\.COMBINED_all\\.sources_counts_table\\.",
+      names(dt$chisq.tests)
+    )
+  ]
+  
+  results_combined <- data.frame(
+    lsoa11cd = vapply(combined_tests, function(x) x$data.name, character(1)),
+    X.squared = vapply(combined_tests, function(x) unname(x$statistic), numeric(1)),
+    df = vapply(combined_tests, function(x) unname(x$parameter), numeric(1)),
+    p.value = vapply(combined_tests, function(x) x$p.value, numeric(1)),
+    datasource = "combine",
+    row.names = NULL
+  )
+  
+  results_seperate <- data.frame(
+    lsoa11cd = vapply(seperate_tests, function(x) x$data.name, character(1)),
+    X.squared = vapply(seperate_tests, function(x) unname(x$statistic), numeric(1)),
+    df = vapply(seperate_tests, function(x) unname(x$parameter), numeric(1)),
+    p.value = vapply(seperate_tests, function(x) x$p.value, numeric(1)),
+    datasource = "combine",
+    row.names = NULL
+  )
+  
+  if(type == 'split' && length(names_region) != numsources){
+    names_region <- rep(names_region, times = numsources)
   }
   
-browser()
   shape_list <- lapply(names_region, function(region) {
     boundr::bounds(
       "lsoa",
@@ -1808,10 +1065,30 @@ browser()
       dplyr::select(lsoa11cd, geometry)
   })
   
-  shape_sf <- shape_list[[j]] |>
-    dplyr::left_join(results_df, by = "lsoa11cd") |>
+  shape_sf <- shape_list[[1]] |>
+    dplyr::left_join(results_combined, by = "lsoa11cd") |>
     sf::st_as_sf()
   
+  
+  plotresult <-  ggplot2::ggplot(plot.matrix) +
+    ggplot2::geom_sf(ggplot2::aes(fill = mean.study)) +
+    ggplot2::scale_fill_gradientn(
+      colours = grDevices::colorRampPalette(c(
+        "#440154",
+        "#414487",
+        "#2A788E",
+        "#22A884",
+        "#7AD151",
+        "#FDE725"
+      ))(100),
+      na.value = "grey90"
+    ) +
+    ggplot2::labs(fill = xvarname) +
+    ggplot2::facet_wrap(~study) +
+    ggplot2::theme_minimal()
+  
+  return(plotresult)
+  }
   
   
 }
