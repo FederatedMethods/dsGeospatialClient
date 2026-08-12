@@ -188,7 +188,8 @@
 ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE,
                      exclude=NULL,	useNA ="always", suppress.chisq.warnings=FALSE,
                      table.assign=FALSE,	newobj=NULL, datasources=NULL, 
-                     force.nfilter=NULL, names_region = NULL){
+                     force.nfilter=NULL, names_region = NULL, split = TRUE,
+                     draw.plot = TRUE){
   
   # if no connection login details are provided look for 'connection' objects in the environment
   if(is.null(datasources)){
@@ -208,16 +209,16 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   # check if the input object is defined in all the studies
   isDefined(datasources, rvar)
   
-  if(!is.null(cvar)&&!is.character(cvar)){
-    return("Error: if cvar is not null, it must have a value which is a character string naming the column variable for the table")
+  if(is.null(cvar) || !is.character(cvar)){
+    return("Error: cvar must have a value which is a character string naming the column variable for the table")
   }
   
   if(!is.null(cvar)){
     isDefined(datasources, cvar)
   }
   
-  if(!is.null(stvar)&&!is.character(stvar)){
-    return("Error: if stvar is not null, it must have a value which is a character string naming the variable coding separate tables for the table")
+  if(is.null(stvar) || !is.character(stvar)){
+    return("Error: if stvar must have a value which is a character string naming the variable coding separate tables for the table")
   }
   
   if(!is.null(stvar)){
@@ -362,7 +363,38 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   #END OF MAIN FUNCTION LEADING UP TO CALL
   ##############################################################################
-  ###############################################################################
+  ## plotting 
+  plot_matrix <- list()
+  
+  if(!is.null(names_region) && all(is.character(names_region))){
+    names_region.valid = TRUE
+    
+    if(!split && length(names_region) > 1){
+      warning(paste0("more than one region selected for split = ", split,
+                     ", using only first names_region to return"))
+      names_region = names_region[1]
+    }
+    
+    if(split && length(names_region) != numstudies){
+      names_region <- rep(names_region, times = numstudies)
+    }
+    
+    shape_list <- lapply(names_region, function(region) {
+      boundr::bounds(
+        "lsoa",
+        within_level = "lad",
+        within_names = region,
+        lookup_year = 2011,
+        opts = boundr::boundr_options(resolution = "BFC")
+      ) |>
+        dplyr::select(lsoa11cd, geometry)
+    })
+    
+  }else{
+    warning("invalid region names, returning the whole table")
+    draw.plot = FALSE
+    names_region.valid = FALSE
+  }
   
   #Take serverside output and set up arrays with the correct dimensions
   #so all values of a given dimension in any study are included in the
@@ -764,7 +796,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   ######################################################################
   
   #clean and process output tables
-
+  
   array.all.sources.temp<-array.all.sources
   
   array.all.sources<-as.numeric(array.all.sources.temp)
@@ -773,7 +805,8 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
                            dimnames=dimnames(array.all.sources.temp))
 
   output.text.temp<-paste0(",TABLES.COMBINED_all.sources_counts=combine.array.all.sources)")
-
+  
+if(split){
   for(ns in numsources:1)
   {
     name.array.study<-paste0("array.study.",ns)
@@ -782,9 +815,9 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     calltext<-paste0(name.array.study,"<-array.all.sources[",commas.vect,ns,"]")
     eval(parse(text=calltext))
     
-    output.text.temp<-paste0(",TABLE_STUDY.",study.names.valid[ns],"_counts=array.study.",ns,output.text.temp)
+    output.text.temp<-paste0(",TABLE_STUDY.",study.names.valid[ns],"_counts=array.study.",ns, output.text.temp)
   }
-
+}
 
   ##################################################
   #NOW MOVE TO CALCULATE ROW AND COLUMN PROPORTIONS#
@@ -797,7 +830,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   if(num.table.dims==3)
   {
     #start with combined table				  
-
+    if(!split){
     combine.array.all.sources.row.props<-combine.array.all.sources
     combine.array.all.sources.col.props<-combine.array.all.sources
     
@@ -828,11 +861,17 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     eval(parse(text=calltext2))
     eval(parse(text=calltext3))
     
-    
+    output.text.temp<-paste0("output.list <- list(TABLES.COMBINED_all.sources_row.props=TABLE.COMBINED_row.props",
+                             ",TABLES.COMBINED_all.sources_col.props=TABLE.COMBINED_col.props",
+                             output.text.temp)
+
+    eval(parse(text=output.text.temp))
+    }
+
     #######################	
     #study specific tables#
     #######################
-  
+   if(split){
     for(ns in numsources:1)
     {
       #	name.array.study<-paste0("array.study.",ns)
@@ -875,11 +914,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
       
     }
     
-    output.text.temp<-paste0(",TABLES.COMBINED_all.sources_row.props=TABLE.COMBINED_row.props,
-						   TABLES.COMBINED_all.sources_col.props=TABLE.COMBINED_col.props",
-                             output.text.temp)
-    
-    
+  
     for(ns in numsources:1)
     {
       if(ns>1)
@@ -898,16 +933,12 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
         
       }
     }
-    
+
     eval(parse(text=output.text.props.counts))
-    
+  }
     return.list.first<-list(output.list=output.list,validity.message=validity.message)
-    # if(!report.chisq.tests&&!table.assign)
-    # {
-    #  return(return.list.first)
-    #}
-  
-  }#END second dim=3 loop
+  }
+  #END second dim=3 loop
 
 
   #################################################
@@ -921,8 +952,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   #NOW UNDERTAKE CHISQUARED TESTS#
   ################################
 
-  # if(report.chisq.tests)
-  # {
+
     ##########################
     #TABLES WITH 3 DIMENSIONS#
     ##########################
@@ -936,13 +966,12 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     #Combined studies#
     ##################
     
-    
     if(num.table.dims==3){
-      
+      results_table <- data.frame()
       numtests<-dim(combine.array.all.sources)[num.table.dims]
       
       chisq.list.temp<-")"
-      
+      if(!split){
       for(nt in numtests:1)
       {
         chisqtext<-paste0("chisq.test_TABLES.COMBINED.",nt,"<-stats::chisq.test(combine.array.all.sources[,,nt])")
@@ -950,13 +979,30 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
         data.name.change <- paste0("chisq.test_TABLES.COMBINED.", nt, "$data.name <- stvar.all.unique.levels[nt]") # tk modified 
         eval(parse(text=data.name.change)) # tk modified
         chisq.list.temp<-paste0(",chisq.test_TABLES.COMBINED_all.sources_counts_table.",nt,"=chisq.test_TABLES.COMBINED.",nt,chisq.list.temp)	
+        
+      }
+      chisq.list.temp <- paste0("chisq.tests <- list(", sub("^,", "", chisq.list.temp))
+      eval(parse(text=chisq.list.temp))
+      
+      results_table <- data.frame(
+        lsoa11cd = vapply(chisq.tests, function(x) x$data.name, character(1)),
+        X.squared = vapply(chisq.tests, function(x) unname(x$statistic), numeric(1)),
+        df = vapply(chisq.tests, function(x) unname(x$parameter), numeric(1)),
+        p.value = vapply(chisq.tests, function(x) x$p.value, numeric(1)),
+        datasource = "COMBINED",
+        row.names = NULL)
+      
+      if(names_region.valid){
+        plot_matrix[[1]] <- shape_list[[1]] |>
+          dplyr::left_join(results_table, by = "lsoa11cd") |>
+          sf::st_as_sf()
       }
       
-      
+      }
       ##################
       #Separate studies#
       ##################
-      
+      if(split){
       for(ns in numsources:1)
       {
         input.calltext<-paste0("input.array.source.specific<-array.study.",ns)
@@ -969,127 +1015,94 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
         for(nt in numtests:1)
         {
           
-          if(nt>1||ns>1)
-          {
-            chisqtext<-paste0("chisq.test_TABLE.STUDY.",ns,"_counts.",nt,"<-stats::chisq.test(input.array.source.specific[,,nt])")
-            eval(parse(text=chisqtext))
-            data.name.change <- paste0("chisq.test_TABLE.STUDY.", ns,"_counts.",nt, "$data.name <- stvar.all.unique.levels[nt]") # tk modified 
-            eval(parse(text=data.name.change)) # tk modified
-            chisq.list.temp<-paste0(",chisq.test_TABLE.STUDY.",study.names.valid[ns],"_counts_table.",nt,"=chisq.test_TABLE.STUDY.",ns,"_counts.",nt,chisq.list.temp)	
-          }
-          else
-          {
+           if(nt>1)
+           {
+             chisqtext<-paste0("chisq.test_TABLE.STUDY.",ns,"_counts.",nt,"<-stats::chisq.test(input.array.source.specific[,,nt])")
+             eval(parse(text=chisqtext))
+             data.name.change <- paste0("chisq.test_TABLE.STUDY.", ns,"_counts.",nt, "$data.name <- stvar.all.unique.levels[nt]") # tk modified 
+             eval(parse(text=data.name.change)) # tk modified
+             chisq.list.temp<-paste0(",chisq.test_TABLE.STUDY.",study.names.valid[ns],"_counts_table.",nt,"=chisq.test_TABLE.STUDY.",ns,"_counts.",nt,chisq.list.temp)	
+           }
+           else
+           {
+            
             chisqtext<-paste0("chisq.test_TABLE.STUDY.",ns,"_counts.",nt,"<-stats::chisq.test(input.array.source.specific[,,nt])")
             eval(parse(text=chisqtext))
             data.name.change <- paste0("chisq.test_TABLE.STUDY.", ns,"_counts.",nt, "$data.name <- stvar.all.unique.levels[nt]") # tk modified 
             eval(parse(text=data.name.change)) # tk modified
             chisq.list.text<-paste0("chisq.tests<-list(chisq.test_TABLE.STUDY.",study.names.valid[ns],"_counts_table.",nt,"=chisq.test_TABLE.STUDY.",ns,"_counts.",nt,chisq.list.temp)
-          }
+           }
         }
-      }#END ns loop
-      
-      #	print(chisq.list.text)
-      
-      eval(parse(text=chisq.list.text))
-      
+        eval(parse(text=chisq.list.text))
+        results_server <- data.frame(
+          lsoa11cd = vapply(chisq.tests, function(x) x$data.name, character(1)),
+          X.squared = vapply(chisq.tests, function(x) unname(x$statistic), numeric(1)),
+          df = vapply(chisq.tests, function(x) unname(x$parameter), numeric(1)),
+          p.value = vapply(chisq.tests, function(x) x$p.value, numeric(1)),
+          datasource = study.names.valid[ns],
+          row.names = NULL)
+        
+       if(names_region.valid){
+        plot_matrix[[ns]] <- shape_list[[ns]] |>
+          dplyr::left_join(results_server, by = "lsoa11cd") |>
+          sf::st_as_sf()
+       }
+       else
+        {
+        results_table <- rbind.data.frame(results_table, results_server)
+        }
+      }
+      #END ns loop
+      }
       
       #If warnings suppressed now return to default
       if(suppress.chisq.warnings)
       {
         options(warn=0)
       }
-      
-      return.list.second<-list(output.list=return.list.first,chisq.tests=chisq.tests,validity.message=validity.message)
-
-      # if(!table.assign)
-      # {
-      #   return(return.list.second)
-      # }
- 
     }
-    #END third dim=3 loop
-   
-    
-  #}
-  browser()
 
-  #return.chisq <- return.list.second$chisq.tests$chisq.test_TABLES.COMBINED_all.sources_counts_table
-  
-  # Plotting 
-  if(plot){
-  
-  combined_tests <- dt$chisq.tests[
-    grep(
-      "^chisq\\.test_TABLES\\.COMBINED_all\\.sources_counts_table\\.",
-      names(dt$chisq.tests)
-    )
-  ]
-  
-  seperate_tests <- dt$chisq.tests[
-    grep(
-      "^chisq\\.test_TABLES\\.COMBINED_all\\.sources_counts_table\\.",
-      names(dt$chisq.tests)
-    )
-  ]
-  
-  results_combined <- data.frame(
-    lsoa11cd = vapply(combined_tests, function(x) x$data.name, character(1)),
-    X.squared = vapply(combined_tests, function(x) unname(x$statistic), numeric(1)),
-    df = vapply(combined_tests, function(x) unname(x$parameter), numeric(1)),
-    p.value = vapply(combined_tests, function(x) x$p.value, numeric(1)),
-    datasource = "combine",
-    row.names = NULL
-  )
-  
-  results_seperate <- data.frame(
-    lsoa11cd = vapply(seperate_tests, function(x) x$data.name, character(1)),
-    X.squared = vapply(seperate_tests, function(x) unname(x$statistic), numeric(1)),
-    df = vapply(seperate_tests, function(x) unname(x$parameter), numeric(1)),
-    p.value = vapply(seperate_tests, function(x) x$p.value, numeric(1)),
-    datasource = "combine",
-    row.names = NULL
-  )
-  
-  if(type == 'split' && length(names_region) != numsources){
-    names_region <- rep(names_region, times = numsources)
+# Plotting 
+  if (!draw.plot && !names_region.valid) {
+    
+    return(results_table)
+    
+  } else if (!draw.plot && names_region.valid) {
+    
+    plot.matrix <- do.call(rbind, plot_matrix) |>
+      sf::st_drop_geometry()
+    
+    return(plot.matrix)
+    
+  } else if (draw.plot && names_region.valid) {
+    
+    plot.matrix <- do.call(rbind, plot_matrix)
+    
+    plotresult <- ggplot2::ggplot(plot.matrix) +
+      ggplot2::geom_sf(
+        ggplot2::aes(fill = X.squared)
+      ) +
+      ggplot2::scale_fill_gradientn(
+        colours = grDevices::colorRampPalette(
+          c(
+            "#440154",
+            "#414487",
+            "#2A788E",
+            "#22A884",
+            "#7AD151",
+            "#FDE725"
+          )
+        )(100),
+        na.value = "grey90"
+      ) +
+      ggplot2::labs(fill = "X.squared") +
+      ggplot2::facet_wrap(~datasource) +
+      ggplot2::theme_minimal()
+    
+    return(plotresult)
   }
-  
-  shape_list <- lapply(names_region, function(region) {
-    boundr::bounds(
-      "lsoa",
-      within_level = "lad",
-      within_names = region,
-      lookup_year = 2011,
-      opts = boundr::boundr_options(resolution = "BFC")
-    ) |>
-      dplyr::select(lsoa11cd, geometry)
-  })
-  
-  shape_sf <- shape_list[[1]] |>
-    dplyr::left_join(results_combined, by = "lsoa11cd") |>
-    sf::st_as_sf()
-  
-  
-  plotresult <-  ggplot2::ggplot(plot.matrix) +
-    ggplot2::geom_sf(ggplot2::aes(fill = mean.study)) +
-    ggplot2::scale_fill_gradientn(
-      colours = grDevices::colorRampPalette(c(
-        "#440154",
-        "#414487",
-        "#2A788E",
-        "#22A884",
-        "#7AD151",
-        "#FDE725"
-      ))(100),
-      na.value = "grey90"
-    ) +
-    ggplot2::labs(fill = xvarname) +
-    ggplot2::facet_wrap(~study) +
-    ggplot2::theme_minimal()
-  
-  return(plotresult)
   }
   
   
-}
+
 #ds.table

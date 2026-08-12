@@ -190,10 +190,32 @@ LSOA-level plotting can be done by combining or by splitting across the servers.
 
 ```{r}
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", report.chisq.tests=TRUE,
-         exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-         table.assign=FALSE,	newobj=NULL, datasources=NULL, 
-         force.nfilter=NULL)
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          table.assign=FALSE,	newobj=NULL, datasources=NULL, names_region = c("Liverpool",  "Sefton"),
+          force.nfilter=NULL, split = FALSE, draw.plot = TRUE)
 
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", report.chisq.tests=TRUE,
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          table.assign=FALSE,	newobj=NULL, datasources=NULL, names_region = "Liverpool",
+          force.nfilter=NULL, split = TRUE, draw.plot = TRUE)
+
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", report.chisq.tests=TRUE,
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          table.assign=FALSE,	newobj=NULL, datasources=NULL, names_region = NULL,
+          force.nfilter=NULL, split = TRUE, draw.plot = FALSE)
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", report.chisq.tests=TRUE,
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          table.assign=FALSE,	newobj=NULL, datasources=NULL, names_region = NULL,
+          force.nfilter=NULL, split = TRUE, draw.plot = TRUE)
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", report.chisq.tests=TRUE,
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          table.assign=FALSE,	newobj=NULL, datasources=NULL, names_region = "Liverpool",
+          force.nfilter=NULL, split = TRUE, draw.plot = FALSE)
 
 ```
+
+
 
