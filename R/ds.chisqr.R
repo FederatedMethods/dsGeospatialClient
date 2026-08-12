@@ -185,11 +185,10 @@
 #' @author Paul Burton and Alex Westerberg for DataSHIELD Development Team, 01/05/2020
 #' @export
 #' 
-ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE,
-                     exclude=NULL,	useNA ="always", suppress.chisq.warnings=FALSE,
-                     table.assign=FALSE,	newobj=NULL, datasources=NULL, 
-                     force.nfilter=NULL, names_region = NULL, split = TRUE,
-                     draw.plot = TRUE){
+ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, exclude=NULL,	
+                      useNA ="always", suppress.chisq.warnings=FALSE, 
+                      datasources=NULL, force.nfilter=NULL, names_region = NULL, 
+                      split = TRUE, draw.plot = TRUE){
   
   # if no connection login details are provided look for 'connection' objects in the environment
   if(is.null(datasources)){
@@ -215,6 +214,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   if(!is.null(cvar)){
     isDefined(datasources, cvar)
+    cvar.transmit<-cvar
   }
   
   if(is.null(stvar) || !is.character(stvar)){
@@ -223,6 +223,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   if(!is.null(stvar)){
     isDefined(datasources, stvar)
+    stvar.transmit<-stvar
   }
   
   if(useNA!="no" && useNA!="always"){
@@ -236,26 +237,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   #All arguments should be directly transmittable
   rvar.transmit<-rvar
-  
-  if(is.null(cvar))
-  {
-    cvar.transmit<-NULL
-  }
-  else
-  {
-    cvar.transmit<-cvar
-  }
-  
-  if(is.null(stvar))
-  {
-    stvar.transmit<-NULL
-  }
-  else
-  {
-    stvar.transmit<-stvar
-  }
-  
-  
+
   if(is.null(exclude))
   {
     exclude.transmit<-NULL
@@ -275,7 +257,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   {
     force.nfilter.transmit<-force.nfilter
   }
-  #CALL THE asFactorDS1 SERVER SIDE FUNCTION (AN AGGREGATE FUNCTION)
+  #CALL THE asFactorDS3 SERVER SIDE FUNCTION (AN AGGREGATE FUNCTION)
   # FOR rvar, cvar AND stvar  
   #TO DETERMINE ALL OF THE LEVELS REQUIRED
   
@@ -300,7 +282,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   ########################################################
   
-  if(!is.null(cvar)){
+  
     cvar.asfactor.calltext <- call("asFactorDS3", cvar)
     cvar.all.levels <- DSI::datashield.aggregate(datasources, cvar.asfactor.calltext)
     
@@ -319,14 +301,53 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     cvar.all.unique.levels <- as.character(unique(cvar.all.levels.all.studies))
     
     cvar.all.unique.levels.transmit <- paste0(cvar.all.unique.levels, collapse=",")
-  }else{
-    cvar.all.unique.levels.transmit<-NULL
-  }
-  ########################################################
   
-  if(!is.null(stvar)){
+  ########################################################
+    plot_matrix <- list()
+    
+    if(!is.null(names_region) && all(is.character(names_region))){
+      names_region.valid = TRUE
+      
+      if(!split && length(names_region) > 1){
+        warning(paste0("more than one region selected for split = ", split,
+                       ", using only first names_region to return"))
+        names_region = names_region[1]
+      }
+      
+      if(split && length(names_region) != numstudies){
+        names_region <- rep(names_region, times = numstudies)
+      }
+      
+      shape_list <- lapply(names_region, function(region) {
+        boundr::bounds(
+          "lsoa",
+          within_level = "lad",
+          within_names = region,
+          lookup_year = 2011,
+          opts = boundr::boundr_options(resolution = "BFC")
+        ) |>
+          dplyr::select(lsoa11cd, geometry)
+      })
+      
+    }else{
+      warning("invalid region names, returning the whole table")
+      draw.plot = FALSE
+      names_region.valid = FALSE
+    }
+
     stvar.asfactor.calltext <- call("asFactorDS3", stvar)
     stvar.all.levels <- DSI::datashield.aggregate(datasources, stvar.asfactor.calltext)
+  
+    if (exists("shape_list")){
+    matched_lsoas <- Map(
+      function(stvar_levels, shape) {
+        stvar_levels[stvar_levels %in% shape$lsoa11cd]
+      },
+      stvar.all.levels,
+      shape_list
+    )
+    stvar.all.levels <- matched_lsoas
+    }
     
     numstudies <- length(datasources)
     
@@ -343,11 +364,6 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     stvar.all.unique.levels <- as.character(unique(stvar.all.levels.all.studies))
     
     stvar.all.unique.levels.transmit <- paste0(stvar.all.unique.levels, collapse=",")
-  }else{
-    stvar.all.unique.levels.transmit<-NULL
-  }
-  
-
   
   # CALL THE MAIN SERVER SIDE AGGREGATE FUNCTION
   
@@ -364,38 +380,6 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   #END OF MAIN FUNCTION LEADING UP TO CALL
   ##############################################################################
   ## plotting 
-  plot_matrix <- list()
-  
-  if(!is.null(names_region) && all(is.character(names_region))){
-    names_region.valid = TRUE
-    
-    if(!split && length(names_region) > 1){
-      warning(paste0("more than one region selected for split = ", split,
-                     ", using only first names_region to return"))
-      names_region = names_region[1]
-    }
-    
-    if(split && length(names_region) != numstudies){
-      names_region <- rep(names_region, times = numstudies)
-    }
-    
-    shape_list <- lapply(names_region, function(region) {
-      boundr::bounds(
-        "lsoa",
-        within_level = "lad",
-        within_names = region,
-        lookup_year = 2011,
-        opts = boundr::boundr_options(resolution = "BFC")
-      ) |>
-        dplyr::select(lsoa11cd, geometry)
-    })
-    
-  }else{
-    warning("invalid region names, returning the whole table")
-    draw.plot = FALSE
-    names_region.valid = FALSE
-  }
-  
   #Take serverside output and set up arrays with the correct dimensions
   #so all values of a given dimension in any study are included in the
   #tables produced for each individual study and for the combined values
@@ -432,8 +416,6 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   
   if(num.valid.studies==0)
   {
-    # if ((! table.assign) || report.chisq.tests)
-     #{
       validity.message<-"All studies failed for reasons identified below"
       message("\n",validity.message,"\n\n")
       for(ns in 1:numsources.orig)
@@ -442,11 +424,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
       }
       
       return(list(validity.message=validity.message,error.messages=error.messages))
-    #}
-    # else
-    # {
-    #   return(NULL)
-    # }
+    
   }
   
   
@@ -468,14 +446,10 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   table.out.valid <- FALSE
   list.text<-paste0("table.out.valid<-list(",list.temp,")")
   
-  
   eval(parse(text=list.text))
-  
   
   table.out<-table.out.valid
   numsources<-length(table.out)
-  
-  
   
   if(num.valid.studies > 0 && num.valid.studies<numsources.orig)
   {
@@ -501,15 +475,14 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   if(num.valid.studies==numsources.orig)
   {
     validity.message<-"Data in all studies were valid"
-    # if (! table.assign)
-    # {
+
       message("\n",validity.message,"\n")
       for(ns in 1:numsources.orig)
       {
         message("\nStudy",ns,": ",error.messages[[ns]])
       }
       message("\n\n")
-    #}
+
   }
   
   #check all tables from all sources have the same number of dimensions
@@ -519,9 +492,7 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
   {
     table.dimensions[ns]<-length(dim(table.out[[ns]]))
   }
-  
   #table.dimensions
-  
   all.dims.same<-TRUE
   if(numsources>1)
   {
@@ -534,30 +505,12 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
         return(return.message)   
       }
     }
-    
-    if(all.dims.same) 
-    {
-      num.table.dims<-table.dimensions[1]
-    }
-    else
-    {
-      num.table.dims<-NA
-    }
+ 
   }
   
-  
-  if(numsources==1)
-  {
-    num.table.dims<-table.dimensions[1]
-    
-  }
-  
-  #num.table.dims
   ######################################################################
   #Work first with three dimensional tables
-  if(num.table.dims==3)
-  {
-    
+
     #identify all possible values of each dimension
     
     rvar.dimnames<-NULL
@@ -578,15 +531,8 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     cvar.dimnames.unique<-unique(cvar.dimnames)
     stvar.dimnames.unique<-unique(stvar.dimnames)
     
-    #print(rvar.dimnames)
-    
-    #print(rvar.dimnames.unique)
-    #print(cvar.dimnames.unique)
-    #print(stvar.dimnames.unique)
-    
     numcells.all.sources<-length(rvar.dimnames.unique)*length(cvar.dimnames.unique)*length(stvar.dimnames.unique)
-    #numcells.all.sources
-    
+
     empty.table.all.sources.col.1<-rep(rvar.dimnames.unique,times=(length(cvar.dimnames.unique)*length(stvar.dimnames.unique)))
     empty.table.all.sources.col.1
     
@@ -602,15 +548,8 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
     empty.table.all.sources<-cbind(empty.table.all.sources.col.1,empty.table.all.sources.col.2,
                                    empty.table.all.sources.col.3,empty.table.all.sources.col.4)
     
-    #dimnames(empty.table.all.sources)<-list(NULL,NULL)
-    
-    
     empty.table.all.sources[is.na(empty.table.all.sources)]<-"NA"
-    
-    #print(empty.table.all.sources) #1 table length 36 empty values
-    
-    
-    
+   
     dim.vector.all.sources<-c(length(rvar.dimnames.unique),length(cvar.dimnames.unique),
                               length(stvar.dimnames.unique),numsources)
     
@@ -767,7 +706,8 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
         #print(array.all.sources)
       }#end of tables not identical loop
       
-    }#end of ns loop
+    }
+    #end of ns loop
 
     
     #Combine across studies if requested
@@ -783,15 +723,15 @@ ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, report.chisq.tests=FALSE
       }
     }
     
-    combine.array.all.sources<-array(data=combine.array.all.sources,dim=dim(array.all.sources)[1:num.table.dims],
-                                     dimnames=dimnames(array.all.sources)[1:num.table.dims])
-    #print(combine.array.all.sources)
+    combine.array.all.sources<-array(data=combine.array.all.sources,dim=dim(array.all.sources)[1:table.dimensions[1]],
+                                     dimnames=dimnames(array.all.sources)[1:table.dimensions[1]])
+
     
-    ######################
+    
     
     #return(array.all.sources)
     
-  }#end of 3 dims loop
+  #end of 3 dims loop
   
   ######################################################################
   
@@ -810,7 +750,7 @@ if(split){
   for(ns in numsources:1)
   {
     name.array.study<-paste0("array.study.",ns)
-    commas.vect<-rep(",",num.table.dims)
+    commas.vect<-rep(",",table.dimensions[1])
     commas.vect<-paste(commas.vect,collapse="")
     calltext<-paste0(name.array.study,"<-array.all.sources[",commas.vect,ns,"]")
     eval(parse(text=calltext))
@@ -823,12 +763,6 @@ if(split){
   #NOW MOVE TO CALCULATE ROW AND COLUMN PROPORTIONS#
   ##################################################
   
-  ##########################
-  #TABLES WITH 3 DIMENSIONS#
-  ##########################
-  
-  if(num.table.dims==3)
-  {
     #start with combined table				  
     if(!split){
     combine.array.all.sources.row.props<-combine.array.all.sources
@@ -875,7 +809,7 @@ if(split){
     for(ns in numsources:1)
     {
       #	name.array.study<-paste0("array.study.",ns)
-      commas.vect<-rep(",",num.table.dims)
+      commas.vect<-rep(",",table.dimensions[1])
       commas.vect<-paste(commas.vect,collapse="")
       calltext<-paste0("study.specific.table<-array.all.sources[",commas.vect,ns,"]")
       study.specific.table<-NULL
@@ -937,7 +871,7 @@ if(split){
     eval(parse(text=output.text.props.counts))
   }
     return.list.first<-list(output.list=output.list,validity.message=validity.message)
-  }
+  
   #END second dim=3 loop
 
 
@@ -952,11 +886,7 @@ if(split){
   #NOW UNDERTAKE CHISQUARED TESTS#
   ################################
 
-
-    ##########################
-    #TABLES WITH 3 DIMENSIONS#
-    ##########################
-    
+  
     #Suppress.chisq.warnings by default
     if(suppress.chisq.warnings)
     {
@@ -966,9 +896,9 @@ if(split){
     #Combined studies#
     ##################
     
-    if(num.table.dims==3){
+    
       results_table <- data.frame()
-      numtests<-dim(combine.array.all.sources)[num.table.dims]
+      numtests<-dim(combine.array.all.sources)[table.dimensions[1]]
       
       chisq.list.temp<-")"
       if(!split){
@@ -1009,7 +939,7 @@ if(split){
         input.array.source.specific <- NULL
         eval(parse(text=input.calltext))
         
-        numtests<-dim(input.array.source.specific)[num.table.dims]
+        numtests<-dim(input.array.source.specific)[table.dimensions[1]]
         
         
         for(nt in numtests:1)
@@ -1060,7 +990,7 @@ if(split){
       {
         options(warn=0)
       }
-    }
+    
 
 # Plotting 
   if (!draw.plot && !names_region.valid) {
@@ -1103,6 +1033,4 @@ if(split){
   }
   }
   
-  
 
-#ds.table
