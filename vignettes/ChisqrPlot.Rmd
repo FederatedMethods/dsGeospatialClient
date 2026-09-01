@@ -219,3 +219,14 @@ ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
 
 
 
+```{r}
+# Is sex associated with the probability/odds of having asthma, while accounting for the fact that people within the same LSOA may be correlated rather than fully independent?
+  
+ds.glmerSLMA(formula = "has_asthma ~ sex + (1 | lsoa11cd)",
+             offset = NULL,
+             dataName = "D",
+             datasources = conns,
+             family = "poisson")
+```
+
+

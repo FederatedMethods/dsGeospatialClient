@@ -1,7 +1,3 @@
-
-
-
-#'
 #' @title Checks if the objects are defined in all studies
 #' @description This is an internal function.
 #' @details In DataSHIELD an object included in analysis must be defined (i.e. exists)
@@ -84,8 +80,8 @@ extract <- function(input){
 #' @importFrom methods is
 #' @noRd
 .check_datasources <- function(datasources) {
-  if(!(is.list(datasources) && all(unlist(lapply(datasources, function(d) {is(d,"DSConnection")}))))){
-    cli_abort(
+  if(!(is.list(datasources) && all(unlist(lapply(datasources, function(d) {methods::is(d,"DSConnection")}))))){
+    cli::cli_abort(
       c(
         "'Datasources' must be a list of objects with class `DSConnection`"
       ), call = NULL

@@ -154,8 +154,6 @@ dslite.server2$config(defaultDSConfiguration(include=c("dsBase", "dsGeospatial")
 dslite.server2$aggregateMethod("MeanSdGpDS", "MeanSdGpDS")
 
 
-
-
 builder <- DSI::newDSLoginBuilder()
 
 builder$append(

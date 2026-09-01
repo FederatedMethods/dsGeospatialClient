@@ -1,0 +1,106 @@
+---
+title: "Rukun's work"
+output: html_document
+date: "2026-08-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1.Study population characteristics
+
+Before modelling the association between greenspace and asthma, we first describe the participating populations.
+
+#### What does the distribution of variables look like?
+--> Heatmap
+We can first examine lsoa level summary statistics :
+1. mean
+2. Std deviation
+3. Max
+4. Min
+
+Stats can be split/combined across study option to return plot/table
+```{r, eval=FALSE}
+ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns)
+ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
+type='split')
+ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
+type='split', names_region = c("Liverpool", "Sefton"))
+ds.geoheatmapPlot(x="D$distance_local_greenspace", y = "D$lsoa11cd",
+datasources = conns)
+ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
+type = 'split', names_region = c("Liverpool", "Sefton"))
+```
+---> Histogram : may not be useful for lsoa level analysis
+
+#### Is greenspace distance approximately normally distributed?
+This is to be  developed
+```{r, eval=FALSE}
+ds.qqnorm()
+```
+
+#### Does asthma prevalence differ by sex/age/ethnicity/IMD?
+
+For two categorical variables, we can use a chi-squared test.
+
+```{r, eval=FALSE}
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", 
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          datasources=NULL, names_region = c("Liverpool",  "Sefton"),
+          force.nfilter=NULL, split = FALSE, draw.plot = TRUE)
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", 
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          datasources=NULL, names_region = "Liverpool",
+          force.nfilter=NULL, split = TRUE, draw.plot = TRUE)
+
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          datasources=NULL, names_region = NULL,
+          force.nfilter=NULL, split = TRUE, draw.plot = FALSE)
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          datasources=NULL, names_region = NULL,
+          force.nfilter=NULL, split = TRUE, draw.plot = TRUE)
+
+ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
+          exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
+          datasources=NULL, names_region = "Liverpool",
+          force.nfilter=NULL, split = TRUE, draw.plot = FALSE)
+
+```
+
+age/continous variable can’t be tested here (develop t-test?)
+
+## 2. Effect of distance to greenspace
+
+#### Is greenspace distance associated with asthma?
+This is a function from dsbase.
+```{r, eval=FALSE}
+ds.glm(formula="has_asthma ~ greenspace_distance",family="binomial",datasources=connections
+)
+```
+
+
+#### Does the association remain after accounting for individual characteristics?
+This is a function from dsbase.
+```{r, eval=FALSE}
+ds.glm(formula=paste("has_asthma ~ greenspace_distance +","age + sex + ethnicity + imd_decile"
+  ),family="binomial",datasources=connections
+)
+```
+
+
+### 3. Accounting for geographical clustering
+
+#### Question 3.1 — Is greenspace associated with asthma after accounting for LSOA clustering?
+This is a function from dsbase which is based on glmer: a function from package lme4.
+```{r, eval=FALSE}
+ds.glmerSLMA(formula="has_asthma ~ greenspace_distance + (1|lsoa11cd)",family="binomial",datasources=connections
+)
+```
+
+
