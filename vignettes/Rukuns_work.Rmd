@@ -99,8 +99,11 @@ ds.glm(formula=paste("has_asthma ~ greenspace_distance +","age + sex + ethnicity
 #### Question 3.1 — Is greenspace associated with asthma after accounting for LSOA clustering?
 This is a function from dsbase which is based on glmer: a function from package lme4.
 ```{r, eval=FALSE}
-ds.glmerSLMA(formula="has_asthma ~ greenspace_distance + (1|lsoa11cd)",family="binomial",datasources=connections
-)
+ds.glmerSLMA(formula="has_asthma ~ greenspace_distance + (1|lsoa11cd)",
+             family="binomial",
+             dataName = "D",
+             datasources=conns
+             )
 ```
 
 

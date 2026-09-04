@@ -252,8 +252,6 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
     if(type!="split"){
       numsources <- length(output)
       mean.matrix <- NULL
-      max.matrix <- NULL
-      min.matrix <- NULL
       sd.matrix <- NULL
       n.matrix <- NULL
       Nvalid <- 0
@@ -268,13 +266,10 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
         Nmissing <- Nmissing+as.numeric(unlist(output[[j]][6]))
         Ntotal <- Ntotal+as.numeric(unlist(output[[j]][7]))
         
-        max.matrix <- rbind(max.matrix,as.numeric(unlist(output[[j]][9])))
-        min.matrix <- rbind(min.matrix,as.numeric(unlist(output[[j]][10])))
+
       }
      
       var.matrix <- sd.matrix^2
-      min.gp <- matrix(apply(min.matrix, 2, min, na.rm = TRUE), ncol = 1)
-      max.gp <- matrix(apply(max.matrix, 2, min, na.rm = TRUE), ncol = 1)
       nsum.vector <- rep(1,numsources)
       # Calculate weighted means across studies in each group
       mean.gp <- (diag(t(mean.matrix)%*%n.matrix))/(t(n.matrix)%*%nsum.vector)
@@ -297,17 +292,13 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       dimnames(N.gp) <- c(list(names.gp),list("Nvalid_gp"))
       dimnames(SEM.gp) <- c(list(names.gp),list("SEM_gp"))
       
-      # dimnames(min.gp) <- c(list(names.gp),list("Min_gp"))
-      # dimnames(max.gp) <- c(list(names.gp),list("Max_gp"))
-      
+     
     }
     
     # SPLIT 
     if(type!="combine"){
       numsources <- length(output)
       mean.matrix <- NULL
-      max.matrix <- NULL
-      min.matrix <- NULL
       sd.matrix <- NULL
       n.matrix <- NULL
       Nvalid <- 0
@@ -322,8 +313,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
         Nmissing <- Nmissing+as.numeric(unlist(output[[j]][6]))
         Ntotal <- Ntotal+as.numeric(unlist(output[[j]][7]))
         
-        max.matrix <- rbind(max.matrix,as.numeric(unlist(output[[j]][9])))
-        min.matrix <- rbind(min.matrix,as.numeric(unlist(output[[j]][10])))
+
       }
       var.matrix <- sd.matrix^2
       
@@ -332,8 +322,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       N.gp.study <- t(n.matrix)
       SEM.gp.study <- SD.gp.study/sqrt(N.gp.study)
       
-      min.gp.study <- t(min.matrix)
-      max.gp.study <- t(max.matrix)
+
       
       # create names
       names.gp <- rep(NA,dim(mean.gp.study)[1])
@@ -349,8 +338,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       dimnames(N.gp.study) <- c(list(names.gp),list(names.study))
       dimnames(SEM.gp.study) <- c(list(names.gp),list(names.study))
       
-      # dimnames(min.gp.study) <- c(list(names.gp),list(names.study))
-      # dimnames(max.gp.study) <- c(list(names.gp),list(names.study))
+
     }
     
     if(type=="combine"){
@@ -384,9 +372,9 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       
 
       } else {
-        result <- list(mean.gp,SD.gp,N.gp,SEM.gp,Nvalid,Nmissing,Ntotal, min.gp, max.gp, lsoa_names[[1]])
+        result <- list(mean.gp,SD.gp,N.gp,SEM.gp,Nvalid,Nmissing,Ntotal, lsoa_names[[1]])
         names(result) <- list("Mean_gp","StDev_gp","Nvalid_gp","SEM_gp","Total_Nvalid",
-                              "Total_Nmissing","Total_Ntotal", "Min_gp", "Max_gp", "LSOAnames")
+                              "Total_Nmissing","Total_Ntotal", "LSOAnames")
         return(result)
       }
      }
@@ -422,35 +410,14 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       lsoanames <- matrix(unlist(lsoa_names), ncol = numsources)
       dimnames(lsoanames) <- dimnames(mean.gp.study) 
       result <- list(mean.gp.study,SD.gp.study,N.gp.study,SEM.gp.study,Nvalid,
-                     Nmissing,Ntotal, min.gp.study, max.gp.study, lsoanames)
+                     Nmissing,Ntotal, lsoanames)
       names(result) <- list("Mean_gp_study","StDev_gp_study","Nvalid_gp_study",
                             "SEM_gp_study","Total_Nvalid","Total_Nmissing",
-                            "Total_Ntotal", "Min_gp_study", "Max_gp_study", "LSOAnames")
+                            "Total_Ntotal", "LSOAnames")
       return(result)
     }
     }
     
-    # if(type!="combine" & type!="split"){
-    #   mean.gp.study <- cbind(mean.gp.study,mean.gp)
-    #   SD.gp.study <- cbind(SD.gp.study,SD.gp)
-    #   N.gp.study <- cbind(N.gp.study,N.gp)
-    #   SEM.gp.study <- cbind(SEM.gp.study,SEM.gp)
-    #   
-    #   min.gp.study <- cbind(min.gp.study,min.gp)
-    #   max.gp.study <- cbind(max.gp.study,max.gp)
-    #   
-    #   dimnames(mean.gp.study) <- c(list(names.gp),list(c(names.study,"COMBINE")))
-    #   dimnames(SD.gp.study) <- c(list(names.gp),list(c(names.study,"COMBINE")))
-    #   dimnames(N.gp.study) <- c(list(names.gp),list(c(names.study,"COMBINE")))
-    #   dimnames(SEM.gp.study) <- c(list(names.gp),list(c(names.study,"COMBINE")))
-    #   
-    #   dimnames(min.gp.study) <- c(list(names.gp),list(c(names.study,"COMBINE")))
-    #   dimnames(max.gp.study) <- c(list(names.gp),list(c(names.study,"COMBINE")))
-    #   
-    #   result <- list(mean.gp.study,SD.gp.study,N.gp.study,SEM.gp.study,Nvalid,Nmissing,Ntotal, min.gp.study, max.gp.study)
-    #   names(result) <- list("Mean_gp_study","StDev_gp_study","Nvalid_gp_study","SEM_gp_study","Total_Nvalid","Total_Nmissing","Total_Ntotal", "Min_gp_study", "Max_gp_study")
-    #   return(result)
-    # }
   }
   
   if(draw.plot){
