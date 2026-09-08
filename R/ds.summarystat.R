@@ -198,18 +198,71 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
   plot_matrix <- list()
   split <- type == 'split'
   
-  if(!is.null(names_region) && all(is.character(names_region))){
+  ## names_region check 
+  # check if list and all elements are character 
+
+  if (is.list(names_region) &&
+      length(names_region) > 0 &&
+      all(is.character(unlist(names_region)))) {
     names_region.valid = TRUE
     
-    if(!split && length(names_region) > 1){
-      warning(paste0("more than one region selected for type = ", type,
-                     ", using only first names_region to return"))
-      names_region = names_region[1]
-    }
     
-    if(split && length(names_region) != numsources){
-      names_region <- rep(names_region, times = numsources)
-    }
+    names_region <- lapply(names_region, function(i){
+      if("CheshireMercyside" %in% i){
+        indx <- which(unlist(i) == "CheshireMercyside")
+        i <- i[-indx]
+        i <- c(i, "Cheshire East","Cheshire West and Chester",
+               "Halton","Knowsley","Liverpool","Sefton", 
+               "St. Helens","Warrington","Wirral")
+      }else{
+        i <- i
+      }
+    })
+    
+    # names_region is valid check type combination
+    
+    if (split) {
+      if (numsources == 1) {
+        warning(
+          "type 'split', expects length of datasources to be more than 1,
+              defaulting to type 'combine'"
+        )
+        split = FALSE
+      } else{
+        # check list length = numsources
+        # check is all entries match when length is >1
+        if (length(names_region) != numsources) {
+          warning(
+            paste0(
+              "length of names_region should match length of datasources,
+                       using only first elements in names_region to return"
+            )
+          )
+          names_region <- lapply(1:numsources, function(i) {
+            names_region[[i]] <- names_region[[1]]
+          })
+          names_region <- lapply(names_region, unique)
+        } else{
+          names_region <- lapply(names_region, unique)
+        }
+      }
+      } else if(!split) {
+      # when combine, list must have length 1
+      # ifnot repeat list[[1]] for all numsources
+      if (length(names_region) != 1) {
+        warning(
+          "length of names_region must be 1 for type 'combine',
+                 using only first elements in names_region to return"
+        )
+        names_region = list(names_region[[1]])
+        names_region <- lapply(names_region, unique)
+        
+      } else{
+        names_region = list(names_region[[1]])
+        names_region <- lapply(names_region, unique)
+      }
+      }
+    
     
     shape_list <- lapply(names_region, function(region) {
       boundr::bounds(
@@ -239,11 +292,11 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
     }
     
   }else{
-    warning("invalid region names, returning the whole table")
+    warning("invalid region names/format, returning the whole table")
     draw.plot = FALSE
     names_region.valid = FALSE
   }
-  
+ 
 
 ##########
   
