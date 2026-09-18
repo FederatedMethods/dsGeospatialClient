@@ -113,7 +113,7 @@ library(dsGeospatialClient)
 names_region <- list(c("Liverpool", "Sefton"), c("Liverpool"))
 
 ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
-               type='combine', do.checks=FALSE, 
+               type='combe', do.checks=FALSE, 
                draw.plot = TRUE, names_region = names_region, 
                metric = "Mean", datasources=conns)
 ```
