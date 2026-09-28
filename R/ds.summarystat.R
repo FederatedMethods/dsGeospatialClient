@@ -198,18 +198,71 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
   plot_matrix <- list()
   split <- type == 'split'
   
-  if(!is.null(names_region) && all(is.character(names_region))){
+  ## names_region check 
+  # check if list and all elements are character 
+
+  if (is.list(names_region) &&
+      length(names_region) > 0 &&
+      all(is.character(unlist(names_region)))) {
     names_region.valid = TRUE
     
-    if(!split && length(names_region) > 1){
-      warning(paste0("more than one region selected for type = ", type,
-                     ", using only first names_region to return"))
-      names_region = names_region[1]
-    }
     
-    if(split && length(names_region) != numsources){
-      names_region <- rep(names_region, times = numsources)
-    }
+    names_region <- lapply(names_region, function(i){
+      if("CheshireMercyside" %in% i){
+        indx <- which(unlist(i) == "CheshireMercyside")
+        i <- i[-indx]
+        i <- c(i, "Cheshire East","Cheshire West and Chester",
+               "Halton","Knowsley","Liverpool","Sefton", 
+               "St. Helens","Warrington","Wirral")
+      }else{
+        i <- i
+      }
+    })
+    
+    # names_region is valid check type combination
+    
+    if (split) {
+      if (numsources == 1) {
+        warning(
+          "type 'split', expects length of datasources to be more than 1,
+              defaulting to type 'combine'"
+        )
+        split = FALSE
+      } else{
+        # check list length = numsources
+        # check is all entries match when length is >1
+        if (length(names_region) != numsources) {
+          warning(
+            paste0(
+              "length of names_region should match length of datasources,
+                       using only first elements in names_region to return"
+            )
+          )
+          names_region <- lapply(1:numsources, function(i) {
+            names_region[[i]] <- names_region[[1]]
+          })
+          names_region <- lapply(names_region, unique)
+        } else{
+          names_region <- lapply(names_region, unique)
+        }
+      }
+      } else if(!split) {
+      # when combine, list must have length 1
+      # ifnot repeat list[[1]] for all numsources
+      if (length(names_region) != 1) {
+        warning(
+          "length of names_region must be 1 for type 'combine',
+                 using only first elements in names_region to return"
+        )
+        names_region = list(names_region[[1]])
+        names_region <- lapply(names_region, unique)
+        
+      } else{
+        names_region = list(names_region[[1]])
+        names_region <- lapply(names_region, unique)
+      }
+      }
+    
     
     shape_list <- lapply(names_region, function(region) {
       boundr::bounds(
@@ -221,16 +274,20 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       ) |>
         dplyr::select(lsoa11cd, geometry)
     })
+    q.names <- c("5th_Quantile", "10th_Quantile", "25th_Quantile", "50th_Quantile",
+                 "75th_Quantile", "90th_Quantile", "95th_Quantile")
     
-    if(is.null(metric) || !metric %in% c("Mean", "SD","SEM")){
+    if(is.null(metric) || !metric %in% c("Mean", "SD","SEM", q.names)){
       warning("Invalid metric type, returning available metric table")
       draw.plot = FALSE
       names_region.valid =FALSE
     } else {
+      
       if(!split){
       metric_map <- list("Mean" = "mean.gp", 
                          "SD" = "SD.gp", 
                          "SEM" = "SEM.gp")
+      
       } else {
       metric_map <- list("Mean" = "mean.gp.study", 
                          "SD" = "SD.gp.study", 
@@ -239,11 +296,11 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
     }
     
   }else{
-    warning("invalid region names, returning the whole table")
+    warning("invalid region names/format, returning the whole table")
     draw.plot = FALSE
     names_region.valid = FALSE
   }
-  
+ 
 
 ##########
   
@@ -253,6 +310,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       numsources <- length(output)
       mean.matrix <- NULL
       sd.matrix <- NULL
+      qq.matrix <- NULL
       n.matrix <- NULL
       Nvalid <- 0
       Nmissing <- 0
@@ -261,10 +319,11 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       for(j in 1:numsources){
         mean.matrix <- rbind(mean.matrix,as.numeric(unlist(output[[j]][2])))
         sd.matrix <- rbind(sd.matrix,as.numeric(unlist(output[[j]][3])))
-        n.matrix <- rbind(n.matrix,as.numeric(unlist(output[[j]][4])))
-        Nvalid <- Nvalid+as.numeric(unlist(output[[j]][5]))
-        Nmissing <- Nmissing+as.numeric(unlist(output[[j]][6]))
-        Ntotal <- Ntotal+as.numeric(unlist(output[[j]][7]))
+        qq.matrix <- rbind(qq.matrix,as.numeric(unlist(output[[j]][4])))
+        n.matrix <- rbind(n.matrix,as.numeric(unlist(output[[j]][5])))
+        Nvalid <- Nvalid+as.numeric(unlist(output[[j]][6]))
+        Nmissing <- Nmissing+as.numeric(unlist(output[[j]][7]))
+        Ntotal <- Ntotal+as.numeric(unlist(output[[j]][8]))
         
 
       }
@@ -273,6 +332,29 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       nsum.vector <- rep(1,numsources)
       # Calculate weighted means across studies in each group
       mean.gp <- (diag(t(mean.matrix)%*%n.matrix))/(t(n.matrix)%*%nsum.vector)
+      
+      # Calculate weighted quantiles across studies in each group
+      # Repeat each LSOA sample size for its 7 quantiles
+      qq.n.matrix <- t(
+        apply(n.matrix, 1, function(x) rep(x, each = 7))
+      )
+      
+      # Weighted quantiles across studies
+      qq.gp <- (diag(t(qq.matrix) %*% qq.n.matrix)) /
+        (t(qq.n.matrix) %*% nsum.vector)
+      
+      qq.gp <- matrix(
+        qq.gp,
+        ncol = 7,
+        byrow = TRUE
+      )
+      
+      # Add names
+      rownames(qq.gp) <- names(output[[1]][[4]])
+      
+      colnames(qq.gp) <- c("5%_gp", "10%_gp", "25%_gp", "50%_gp", "75%_gp", "90%_gp", "95%_gp")
+      
+      qq.gp <- as.data.frame(qq.gp)
       
       # Calculate weighted SDs across studies in each group
       var.gp <- (diag(t(var.matrix)%*%n.matrix))/(t(n.matrix)%*%nsum.vector)
@@ -292,7 +374,6 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       dimnames(N.gp) <- c(list(names.gp),list("Nvalid_gp"))
       dimnames(SEM.gp) <- c(list(names.gp),list("SEM_gp"))
       
-     
     }
     
     # SPLIT 
@@ -300,6 +381,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       numsources <- length(output)
       mean.matrix <- NULL
       sd.matrix <- NULL
+      qq.matrix <- list()
       n.matrix <- NULL
       Nvalid <- 0
       Nmissing <- 0
@@ -308,23 +390,32 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       for(j in 1:numsources){
         mean.matrix <- rbind(mean.matrix,as.numeric(unlist(output[[j]][2])))
         sd.matrix <- rbind(sd.matrix,as.numeric(unlist(output[[j]][3])))
-        n.matrix <- rbind(n.matrix,as.numeric(unlist(output[[j]][4])))
-        Nvalid <- Nvalid+as.numeric(unlist(output[[j]][5]))
-        Nmissing <- Nmissing+as.numeric(unlist(output[[j]][6]))
-        Ntotal <- Ntotal+as.numeric(unlist(output[[j]][7]))
+        qq.matrix[[j]] <- rbind(qq.matrix,as.numeric(unlist(output[[j]][4])))
+        n.matrix <- rbind(n.matrix,as.numeric(unlist(output[[j]][5])))
+        Nvalid <- Nvalid+as.numeric(unlist(output[[j]][6]))
+        Nmissing <- Nmissing+as.numeric(unlist(output[[j]][7]))
+        Ntotal <- Ntotal+as.numeric(unlist(output[[j]][8]))
         
 
       }
       var.matrix <- sd.matrix^2
-      
       mean.gp.study <- t(mean.matrix)
       SD.gp.study <- t(sd.matrix)
       N.gp.study <- t(n.matrix)
       SEM.gp.study <- SD.gp.study/sqrt(N.gp.study)
       
-
+      qq.gp.study <- lapply(qq.matrix, function(i){
+                              matrix(i, ncol = 7, 
+                                     byrow = TRUE)})
       
-      # create names
+      qq.gp.study <- lapply(qq.gp.study, function(i) {
+        colnames(i) <- c("5%_gp", "10%_gp", "25%_gp", "50%_gp",
+                         "75%_gp", "90%_gp", "95%_gp")
+        i
+      })
+      
+      
+     # create names
       names.gp <- rep(NA,dim(mean.gp.study)[1])
       
       for(k in 1:dim(mean.gp.study)[1]){
@@ -338,7 +429,6 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       dimnames(N.gp.study) <- c(list(names.gp),list(names.study))
       dimnames(SEM.gp.study) <- c(list(names.gp),list(names.study))
       
-
     }
     
     if(type=="combine"){
@@ -360,20 +450,28 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       if(draw.plot){
         
       ## If plot is TRUE please select which metric to plot else table is returned
-      sel.metric <- get(metric_map[[metric]])
       
-      sel.metric.data <- data.frame(lsoa11cd = lsoanames,
+      if(metric %in% q.names){
+        
+        sel.metric.data <- data.frame(lsoa11cd = rownames(qq.gp))
+        sel.metric.data$value <- qq.gp[ , which(metric == q.names)]
+        sel.metric.data$server <- 'combine'
+       
+      } else {
+        sel.metric <- get(metric_map[[metric]])
+        
+        sel.metric.data <- data.frame(lsoa11cd = lsoanames,
                               value = as.numeric(sel.metric),
                               server = 'combine')
-      
+      }
       shape_sf <- shape_list[[1]] |>
         dplyr::left_join(sel.metric.data, by = "lsoa11cd") |>
         sf::st_as_sf()
       
 
       } else {
-        result <- list(mean.gp,SD.gp,N.gp,SEM.gp,Nvalid,Nmissing,Ntotal, lsoa_names[[1]])
-        names(result) <- list("Mean_gp","StDev_gp","Nvalid_gp","SEM_gp","Total_Nvalid",
+        result <- list(mean.gp,SD.gp,N.gp,SEM.gp,qq.gp,Nvalid,Nmissing,Ntotal, lsoa_names[[1]])
+        names(result) <- list("Mean_gp","StDev_gp","Nvalid_gp","SEM_gp", "Q_gp","Total_Nvalid",
                               "Total_Nmissing","Total_Ntotal", "LSOAnames")
         return(result)
       }
@@ -383,6 +481,20 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
     if(type=="split"){
     
     if(draw.plot){
+      browser()
+      if(metric %in% q.names){
+        
+        sel.metric.data <- 
+          lapply(1:length(qq.gp.study), function(i) {
+            data.frame(
+              server = names(datasources)[i],
+              value = qq.gp.study[[i]][ ,which(metric == q.names)],
+              lsoa11cd = lsoa_names[[i]],
+              row.names = NULL
+            )
+          })
+        
+      }else{
     sel.metric <- get(metric_map[[metric]])
     
     sel.metric.data <- 
@@ -394,7 +506,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
             row.names = NULL
           )
         })
-      
+      }
     shape_sf <- do.call(
       rbind,
       lapply(1:numsources, function(i){
@@ -409,10 +521,10 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       
       lsoanames <- matrix(unlist(lsoa_names), ncol = numsources)
       dimnames(lsoanames) <- dimnames(mean.gp.study) 
-      result <- list(mean.gp.study,SD.gp.study,N.gp.study,SEM.gp.study,Nvalid,
+      result <- list(mean.gp.study,SD.gp.study,N.gp.study,SEM.gp.study,qq.gp.study,Nvalid,
                      Nmissing,Ntotal, lsoanames)
       names(result) <- list("Mean_gp_study","StDev_gp_study","Nvalid_gp_study",
-                            "SEM_gp_study","Total_Nvalid","Total_Nmissing",
+                            "SEM_gp_study","Q_gp","Total_Nvalid","Total_Nmissing",
                             "Total_Ntotal", "LSOAnames")
       return(result)
     }
