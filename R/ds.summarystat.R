@@ -390,7 +390,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
       for(j in 1:numsources){
         mean.matrix <- rbind(mean.matrix,as.numeric(unlist(output[[j]][2])))
         sd.matrix <- rbind(sd.matrix,as.numeric(unlist(output[[j]][3])))
-        qq.matrix[[j]] <- rbind(qq.matrix,as.numeric(unlist(output[[j]][4])))
+        qq.matrix[[j]] <- as.numeric(unlist(output[[j]][4]))
         n.matrix <- rbind(n.matrix,as.numeric(unlist(output[[j]][5])))
         Nvalid <- Nvalid+as.numeric(unlist(output[[j]][6]))
         Nmissing <- Nmissing+as.numeric(unlist(output[[j]][7]))
@@ -413,7 +413,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
                          "75%_gp", "90%_gp", "95%_gp")
         i
       })
-      
+     
       
      # create names
       names.gp <- rep(NA,dim(mean.gp.study)[1])
@@ -481,14 +481,14 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
     if(type=="split"){
     
     if(draw.plot){
-      browser()
+      
       if(metric %in% q.names){
         
         sel.metric.data <- 
           lapply(1:length(qq.gp.study), function(i) {
             data.frame(
               server = names(datasources)[i],
-              value = qq.gp.study[[i]][ ,which(metric == q.names)],
+              value = unlist(qq.gp.study[[i]][ ,which(metric == q.names)]),
               lsoa11cd = lsoa_names[[i]],
               row.names = NULL
             )
@@ -507,6 +507,7 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
           )
         })
       }
+     
     shape_sf <- do.call(
       rbind,
       lapply(1:numsources, function(i){
