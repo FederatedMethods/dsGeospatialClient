@@ -208,8 +208,8 @@ ds.summarystat <- function(x=NULL, y=NULL, type='combine', do.checks=FALSE,
     
     
     names_region <- lapply(names_region, function(i){
-      if("CheshireMercyside" %in% i){
-        indx <- which(unlist(i) == "CheshireMercyside")
+      if("Cheshire Merseyside" %in% i){
+        indx <- which(unlist(i) == "Cheshire Merseyside")
         i <- i[-indx]
         i <- c(i, "Cheshire East","Cheshire West and Chester",
                "Halton","Knowsley","Liverpool","Sefton", 

@@ -11,7 +11,8 @@ ds.groupcor(
   type = "split",
   datasources = NULL,
   do.checks = TRUE,
-  names_region = "Liverpool"
+  names_region = "Liverpool",
+  draw.plot = TRUE
 )
 }
 \arguments{
