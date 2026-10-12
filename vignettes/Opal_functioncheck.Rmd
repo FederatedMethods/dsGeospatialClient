@@ -35,7 +35,7 @@ dat <- qof_asthma_cohort_dist_gs_sf |>
 
 # Uploading a subset to save upload time
 
-dat <- dat |> dplyr::filter(lsoa11cd %in% sample(levels(factor(dat$lsoa11cd)), 35))
+#dat <- dat |> dplyr::filter(lsoa11cd %in% sample(levels(factor(dat$lsoa11cd)), 35))
 dat$row_id <- seq_len(nrow(dat)) # needs a unique row id
 
 ```
@@ -122,8 +122,8 @@ ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd",
 ```{r}
 
 ds.groupcor(x = "D$has_asthma", y = "D$distance_local_greenspace", 
-            index = "D$lsoa11cd", datasources = conns, type = "combine", 
-            names_region = "Liverpool")
+            index = "D$lsoa11cd", datasources = conns, type = "split", 
+            names_region = names_region)
 ```
 
 ```{r}
