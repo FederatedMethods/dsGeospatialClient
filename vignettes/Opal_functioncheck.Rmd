@@ -3,6 +3,7 @@ title: "R Notebook"
 output: html_notebook
 ---
 
+Build package locally.
 
 ```{r, eval=FALSE}
 # r console
@@ -21,9 +22,106 @@ devtools::build()
 # go to administration --> R see if the profiles appear
 # go to administration --> Datashield activate profile and initialize
 ```
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+Create example data set.
+
+```{r, eval=FALSE}
+# retrieve LSOA boundaries for Cheshire and Merseyside
+# to reduce coverage, remove names from the `within_names`
+cm_lsoa_sf <- boundr::bounds(
+  "lsoa",
+  within_level = "lad",
+  within_names = c(
+    "Cheshire East",
+    "Cheshire West and Chester",
+    "Halton",
+    "Knowsley",
+    "Liverpool",
+    "Sefton",
+    "St. Helens",
+    "Warrington",
+    "Wirral"
+  ),
+  lookup_year = 2011, # can be either 2011 or 2021
+  opts = boundr::boundr_options(resolution = "BFC")
+)
+
+liverpool_sf <- cm_lsoa_sf |>
+  dplyr::filter(lad22nm %in% "Liverpool")
+
+uprn_gs_sf <- "https://pldr.org/download/2k6r3/n12/UPRN_2_1_greenspace_distances_with_coords.csv" |>
+  readr::read_csv() |>
+  # convert to spatial object
+  sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326) |>
+  # add LSOA details
+  sf::st_join(cm_lsoa_sf)
+
+
+
+qof_asthma_tbl <- "https://pldr.org/download/e6nzv/ng1/QOF_4_03_Asthma_LSOA.csv" |>
+  readr::read_csv() |>
+  # filter out CM LSOAs
+  dplyr::filter(lsoa11 %in% cm_lsoa_sf$lsoa11cd) |>
+  # filter out last year
+  dplyr::filter(year == 2024)
+
+
+
+# set seed for reproducibility
+set.seed(20250603)
+qof_asthma_cohort_tbl <- qof_asthma_tbl |>
+  purrr::pmap(function(lsoa11, den, num, ...) {
+    # recalculate pop to be a multiple of 2
+    pop <- ifelse(den %% 2 != 0, den + 1, den)
+    # extract UPRNs for this LSOA
+    uprn_tbl <- uprn_gs_sf |>
+      sf::st_drop_geometry() |>
+      dplyr::filter(lsoa11cd == lsoa11) |>
+      dplyr::mutate(
+        dist_gs_dec = dplyr::ntile(distance_local_greenspace, 10)
+      ) |>
+      dplyr::arrange(dist_gs_dec)
+    
+    # create cohort table
+    cohort_tbl <- tibble::tibble(
+      lsoa11cd = lsoa11,
+      sex = rep(c(0, 1), each = pop / 2),
+      has_asthma = FALSE,
+      uprn = sample(uprn_tbl$UPRN, size = pop, replace = TRUE)
+    )
+    
+    # randomly assigned the outcome to `num` patients
+    idx <- sample(seq_len(pop), ceiling(num), replace = FALSE)
+    cohort_tbl$has_asthma[idx] <- TRUE
+    
+    # randomly re-assigned UPRNs with higher distances to patients with outcome
+    ## create vector of probabilities, so further distances are favoured
+    p <- c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.2, 0.2, 0.2)
+    idx_uprn_tile <- sample(1:10, ceiling(num), replace = TRUE, prob = p)
+    ## subset UPRNs with match tile as per `idx_uprn_tile`
+    cohort_tbl$uprn[idx] <- purrr::map(idx_uprn_tile, function(x) {
+      # subset based on tile decile  
+      aux <- dplyr::filter(uprn_tbl, dist_gs_dec == x)
+      # extract UPRN
+      aux$UPRN[sample(seq_len(nrow(aux)), 1)]
+    }) |>
+      purrr::list_c()
+    
+    # return final cohort table
+    return(cohort_tbl)
+  }) |>
+  purrr::list_c()
+
+
+qof_asthma_cohort_dist_gs_sf <- qof_asthma_cohort_tbl |>
+  dplyr::left_join(uprn_gs_sf, by = c("uprn" = "UPRN", "lsoa11cd")) |>
+  dplyr::arrange(lsoa11cd, uprn) |>
+  sf::st_as_sf()
+
+
+```
+
+Subset the data for needed coloumns. 
 
 ```{r, eval=FALSE}
 library(opalr)
@@ -40,6 +138,7 @@ dat$row_id <- seq_len(nrow(dat)) # needs a unique row id
 
 ```
 
+Creating project and uploading table.
 
 ```{r}
 library(opalr)
@@ -76,6 +175,7 @@ opal.table_save(
 
 ```
 
+Login 
 ```{r}
 library(DSOpal)
 library(dsBase)
@@ -143,8 +243,4 @@ fitdat <- ds.glmerSLMA(formula="D$has_asthma ~ D$sex + (1|D$lsoa11cd)",
              family="poisson",datasources=conns
 )
 ```
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
