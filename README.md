@@ -54,12 +54,7 @@ Current and planned functionality includes:
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-library(dsGeospatialClient)
-## basic example code
-```
+Use vignettes/Opal_functioncheck.Rmd to try functions in the package. 
 
 ## Contributing
 
