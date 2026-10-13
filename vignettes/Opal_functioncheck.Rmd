@@ -3,27 +3,45 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-Build package locally.
+## Setup you local opal instance 
+1. Install Docker Desktop and R (if not already installed).
+2. Clone the dsGeospatial and dsGeospatialClient repositories.
+3. Open the dsGeospatial project in R and build the server package.
 
 ```{r, eval=FALSE}
 # r console
+# build the dsGeospatial package 
+devtools::document()
 devtools::check()
 devtools::build()
-
-## terminal pwd is docker
-# mv ../../dsGeospatial_0.0.0.9000.tar.gz .
-# docker build   --platform linux/amd64   -t ds-geospatial-rock:0.0.0.9000   .
-# docker compose up -d --force-recreate
-
-
-# go to http://localhost:8880 # check opal instance with docker ps and go to that url
-# go to administration --> Apps add host
-# http://rock-geospatial:8085
-# go to administration --> R see if the profiles appear
-# go to administration --> Datashield activate profile and initialize
 ```
 
-Create example data set.
+```{}
+# Then, in the terminal: Navigate to the directory containing the Dockerfile
+# and docker-compose.yml. Move the built package into the Docker build directory.
+mv ../../dsGeospatial_0.0.0.9000.tar.gz .
+
+# Build the custom Rock image.
+docker build   --platform linux/amd64   -t ds-geospatial-rock:0.0.0.9000   .
+docker compose up -d --force-recreate
+
+# Verify that the containers are running.
+docker ps
+
+```
+
+## Configure Opal:
+```{r}
+# 1. Open http://localhost:8880.
+# 2. Navigate to Administration → Apps and register the Rock host. http://rock-geospatial:8085
+# 3. Navigate to Administration → R and verify the profile.
+# 4. Navigate to Administration → DataSHIELD and activate/initialise the profile.
+
+# Install the client package separately.
+## devtools::install()
+```
+
+## Create example data set.
 
 ```{r, eval=FALSE}
 # retrieve LSOA boundaries for Cheshire and Merseyside
@@ -138,7 +156,7 @@ dat$row_id <- seq_len(nrow(dat)) # needs a unique row id
 
 ```
 
-Creating project and uploading table.
+## Creating project and uploading table.
 
 ```{r}
 library(opalr)
@@ -207,7 +225,7 @@ ds.colnames("D", conns)
 
 ```
 
-
+Test functions 
 ```{r}
 library(dsGeospatialClient)
 names_region <- list(c("Liverpool", "Sefton"), c("Liverpool"))
@@ -233,14 +251,67 @@ ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
           force.nfilter=NULL, split = FALSE, draw.plot = TRUE)
 ```
 
+## Upload gridded Data to Your Local Opal Instance
+To upload the Merseyside demonstration data to your local Opal instance, follow the steps below.
+1. Clone the Merseyside Demo repository https://github.com/Healthy-Urban-Places/Merseyside-Demo-National-Grid/tree/main
 
+
+Open 99_upload_data_to_opal.R and modify the following sections to match your local Opal configuration.
+Step 2.1: Configure Opal settings (lines 21–25)
+Update the Opal settings to point to your local Docker environment:
 ```{r}
-ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns)
+## 1.2 Opal settings ----
+# opal_url <- "http://localhost:8880"
+# project <- "GROVE"
+# user <- "administrator" # for testing purposes
+# opal_resource_url <- "http://opal:8080"
 ```
 
-```{r, eval=FALSE}
-fitdat <- ds.glmerSLMA(formula="D$has_asthma ~ D$sex + (1|D$lsoa11cd)",
-             family="poisson",datasources=conns
+Step 2.2: Configure the DataSHIELD connection (lines 155–166)
+Update the connection parameters to use your local Opal instance and the ds-geospatial profile:
+
+```{r}
+## 2.1 Connect ----
+## Needed to define the OpalDriver class in the current environment
+# Use following to sign in to opal 
+DSOpal::Opal()
+builder <- DSI::newDSLoginBuilder()
+builder$append(
+  server = "mersey-demo",
+  url = "http://localhost:8880",
+  user = "administrator",
+  password = "password",
+  driver = "OpalDriver",
+  profile = "ds-geospatial"
 )
 ```
 
+Ensure that your Docker containers are running and that the ds-geospatial profile 
+has been activated and initialised in Opal.Then execute the script from R:
+
+```{r}
+source("99_upload_data_to_opal.R")
+```
+
+## Verify the uploaded data
+Once the script finishes:
+1. Open your local Opal instance.
+2. Log in using your Opal credentials.
+3. Navigate to Projects → GROVE.
+4. Verify that the expected tables and resources have been created.
+
+## Run functions 
+```{r}
+ds.moransI(
+  x = "obesity_qof_2024_25",
+  listw = "W_band800",
+  nsim = 199,
+  datasources = conns
+)
+```
+
+```{r}
+ds.lagsarlm(obesity_qof_2024_25 ~ dist_food_fastfood + obesity_qof_2023_24,
+            data = "cells_object", listw = "W_band800", datasources = conns)
+
+```
