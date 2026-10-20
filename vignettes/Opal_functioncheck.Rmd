@@ -315,3 +315,21 @@ ds.lagsarlm(obesity_qof_2024_25 ~ dist_food_fastfood + obesity_qof_2023_24,
             data = "cells_object", listw = "W_band800", datasources = conns)
 
 ```
+
+
+```{r}
+ds.lmSLX(obesity_qof_2024_25 ~ dist_food_fastfood + obesity_qof_2023_24,
+            data = "cells_object", listw = "W_band800", datasources = conns)
+```
+
+
+```{r}
+ds.gwrbasic(obesity_qof_2024_25 ~ dist_food_fastfood, 
+            data = "cells_object", dMat = NULL, datasources= conns)
+
+```
+
+```{r}
+ds.conleyreg(formula = obesity_qof_2024_25 ~ dist_food_fastfood,
+             data = "cells_object", dist_cutoff = 1000, datasources = conns)
+```
