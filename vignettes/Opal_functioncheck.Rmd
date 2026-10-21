@@ -333,3 +333,10 @@ ds.gwrbasic(obesity_qof_2024_25 ~ dist_food_fastfood,
 ds.conleyreg(formula = obesity_qof_2024_25 ~ dist_food_fastfood,
              data = "cells_object", dist_cutoff = 1000, datasources = conns)
 ```
+
+```{r}
+ds.splm(formula = obesity_qof_2024_25 ~ dist_food_fastfood,
+        data = "cells_object", datasources = conns)
+```
+
+
