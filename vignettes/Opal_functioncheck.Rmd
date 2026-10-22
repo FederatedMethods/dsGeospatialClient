@@ -339,4 +339,7 @@ ds.splm(formula = obesity_qof_2024_25 ~ dist_food_fastfood,
         data = "cells_object", datasources = conns)
 ```
 
+```{r}
+ds.weigen(x = "cells_object", datasources=conns)
 
+```
