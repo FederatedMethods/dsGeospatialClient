@@ -35,7 +35,7 @@ dat <- qof_asthma_cohort_dist_gs_sf |>
 
 # Uploading a subset to save upload time
 
-#dat <- dat |> dplyr::filter(lsoa11cd %in% sample(levels(factor(dat$lsoa11cd)), 35))
+dat <- dat |> dplyr::filter(lsoa11cd %in% sample(levels(factor(dat$lsoa11cd)), 35))
 dat$row_id <- seq_len(nrow(dat)) # needs a unique row id
 
 ```
@@ -113,30 +113,36 @@ library(dsGeospatialClient)
 names_region <- list(c("Liverpool", "Sefton"), c("Liverpool"))
 
 ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
-               type='combe', do.checks=FALSE, 
+               type='combine', do.checks=FALSE, 
                draw.plot = TRUE, names_region = names_region, 
                metric = "Mean", datasources=conns)
+ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "SD", datasources=conns)
+ds.summarystat(x = "D$distance_local_greenspace", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "5th_Quantile", datasources=conns)
 ```
 
 
 ```{r}
 
 ds.groupcor(x = "D$has_asthma", y = "D$distance_local_greenspace", 
-            index = "D$lsoa11cd", datasources = conns, type = "split", 
-            names_region = names_region)
+            index = "D$lsoa11cd", datasources = conns, type = "combine", 
+            names_region = list("Liverpool"))
 ```
+
 
 ```{r}
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", 
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = "Liverpool",
+          datasources=conns, names_region = "Liverpool",
           force.nfilter=NULL, split = FALSE, draw.plot = TRUE)
 ```
 
 
-```{r}
-ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns)
-```
 
 ```{r, eval=FALSE}
 fitdat <- ds.glmerSLMA(formula="D$has_asthma ~ D$sex + (1|D$lsoa11cd)",
