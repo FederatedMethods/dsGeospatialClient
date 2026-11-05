@@ -1,0 +1,115 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+DSOpal::Opal()
+builder <- DSI::newDSLoginBuilder()
+builder$append(
+  server = "mersey-demo",
+  url = "http://localhost:8880",
+  user = "administrator",
+  password = "password",
+  driver = "OpalDriver",
+  profile = "ds-geospatial"
+)
+```
+
+```{r}
+logindata <- builder$build()
+conns <- DSI::datashield.login(logins = logindata)
+
+```
+
+
+```{r}
+DSI::datashield.assign.resource(
+conns,
+symbol = "cells",
+resource = paste0(project, ".", "cells")
+)
+
+DSI::datashield.assign.resource(
+conns,
+symbol = "W",
+resource = paste0(project, ".", "W_D_5km")
+)
+```
+
+## Materialise arbitrary R objects ----
+
+
+```{r}
+
+DSI::datashield.assign.resource(
+  conns,
+  symbol = "cells_resource",
+  resource = paste0(project, ".cells")
+)
+
+DSI::datashield.assign.expr(
+  conns,
+  symbol = "cells_object",
+  expr = quote(as.resource.object(cells_resource))
+)
+
+```
+
+## Map specific columns ----
+
+
+```{r}
+DSI::datashield.assign.expr(
+  conns,
+  symbol = "obesity_qof_2024_25",
+  expr = quote(cells_object$obesity_qof_2024_25)
+)
+DSI::datashield.assign.expr(
+  conns,
+  symbol = "W_object",
+  expr = quote(as.resource.object(W))
+)
+DSI::datashield.assign.expr(
+  conns,
+  symbol = "W_band800",
+  expr = quote(W_object$band800)
+)
+
+```
+
+
+
+```{r}
+ds.moransI(
+  x = "obesity_qof_2024_25",
+  listw = "W_band800",
+  nsim = 199,
+  datasources = conns
+)
+
+```
+
+```{r}
+out <- ds.localmoran( 
+  x = "obesity_qof_2024_25",
+  listw = "W_band800",
+  datasources = conns
+)
+
+quadr_mean <- out$`mersey-demo`$quadr$mean
+
+counts <- table(quadr_mean)
+
+barplot(
+  counts,
+  xlab = "Local Moran's I quadrant",
+  ylab = "Count",
+  main = "Local Moran's I Quadrants"
+)
+
+
+```
+
+
