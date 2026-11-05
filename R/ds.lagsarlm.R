@@ -131,7 +131,7 @@ ds.lagsarlm <- function(formula = NULL, data = NULL, listw = NULL, type='split',
     #typ1 <- checkClass(datasources, x)
     typ2 <- checkClass(datasources, listw)
   }
- browser()
+
   
   calltext <- paste0("lagsarlmDS(", deparse(formula), ", ", listw, ", ", data, ")", collapse = "")
   
