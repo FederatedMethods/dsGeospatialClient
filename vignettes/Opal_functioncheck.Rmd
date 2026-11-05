@@ -231,23 +231,32 @@ library(dsGeospatialClient)
 names_region <- list(c("Liverpool", "Sefton"), c("Liverpool"))
 
 ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
-               type='combe', do.checks=FALSE, 
+               type='combine', do.checks=FALSE, 
                draw.plot = TRUE, names_region = names_region, 
                metric = "Mean", datasources=conns)
+ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "SD", datasources=conns)
+ds.summarystat(x = "D$distance_local_greenspace", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "5th_Quantile", datasources=conns)
 ```
 
 
 ```{r}
 
 ds.groupcor(x = "D$has_asthma", y = "D$distance_local_greenspace", 
-            index = "D$lsoa11cd", datasources = conns, type = "split", 
-            names_region = names_region)
+            index = "D$lsoa11cd", datasources = conns, type = "combine", 
+            names_region = list("Liverpool"))
 ```
+
 
 ```{r}
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", 
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = "Liverpool",
+          datasources=conns, names_region = "Liverpool",
           force.nfilter=NULL, split = FALSE, draw.plot = TRUE)
 ```
 
@@ -256,16 +265,6 @@ To upload the Merseyside demonstration data to your local Opal instance, follow 
 1. Clone the Merseyside Demo repository https://github.com/Healthy-Urban-Places/Merseyside-Demo-National-Grid/tree/main
 
 
-Open 99_upload_data_to_opal.R and modify the following sections to match your local Opal configuration.
-Step 2.1: Configure Opal settings (lines 21–25)
-Update the Opal settings to point to your local Docker environment:
-```{r}
-## 1.2 Opal settings ----
-# opal_url <- "http://localhost:8880"
-# project <- "GROVE"
-# user <- "administrator" # for testing purposes
-# opal_resource_url <- "http://opal:8080"
-```
 
 Step 2.2: Configure the DataSHIELD connection (lines 155–166)
 Update the connection parameters to use your local Opal instance and the ds-geospatial profile:

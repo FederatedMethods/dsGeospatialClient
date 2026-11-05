@@ -8,6 +8,7 @@ date: "2026-08-18"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 ## 1.Study population characteristics
 
 Before modelling the association between greenspace and asthma, we first describe the participating populations.
@@ -17,93 +18,118 @@ Before modelling the association between greenspace and asthma, we first describ
 We can first examine lsoa level summary statistics :
 1. mean
 2. Std deviation
-3. Max
-4. Min
+3. SEM
+4. Quantile
 
 Stats can be split/combined across study option to return plot/table
 ```{r, eval=FALSE}
-ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns)
-ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
-type='split')
-ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
-type='split', names_region = c("Liverpool", "Sefton"))
-ds.geoheatmapPlot(x="D$distance_local_greenspace", y = "D$lsoa11cd",
-datasources = conns)
-ds.geoheatmapPlot(x="D$has_asthma", y = "D$lsoa11cd", datasources = conns,
-type = 'split', names_region = c("Liverpool", "Sefton"))
+names_region <- list(c("Liverpool", "Sefton"), c("Liverpool"))
+
+ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "Mean", datasources=conns)
+ds.summarystat(x = "D$has_asthma", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "SD", datasources=conns)
+ds.summarystat(x = "D$distance_local_greenspace", y = "D$lsoa11cd", 
+               type='combine', do.checks=FALSE, 
+               draw.plot = TRUE, names_region = names_region, 
+               metric = "5th_Quantile", datasources=conns)
+
 ```
 ---> Histogram : may not be useful for lsoa level analysis
 
 #### Is greenspace distance approximately normally distributed?
 This is to be  developed
+
 ```{r, eval=FALSE}
 ds.qqnorm()
 ```
 
 #### Does asthma prevalence differ by sex/age/ethnicity/IMD?
+For two numeric variables, we can do grouped pearson correlation.
+
+```{r, eval=FALSE}
+
+ds.groupcor(x = "D$has_asthma", y = "D$distance_local_greenspace", 
+            index = "D$lsoa11cd", datasources = conns, type = "combine", 
+            names_region = list("Liverpool"))
+
+
+```
 
 For two categorical variables, we can use a chi-squared test.
 
 ```{r, eval=FALSE}
+
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", 
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = c("Liverpool",  "Sefton"),
+          datasources=conns, names_region = c("Liverpool",  "Sefton"),
           force.nfilter=NULL, split = FALSE, draw.plot = TRUE)
 
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd", 
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = "Liverpool",
+          datasources=conns, names_region = "Liverpool",
           force.nfilter=NULL, split = TRUE, draw.plot = TRUE)
 
 
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = NULL,
+          datasources=conns, names_region = NULL,
           force.nfilter=NULL, split = TRUE, draw.plot = FALSE)
 
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = NULL,
+          datasources=conns, names_region = NULL,
           force.nfilter=NULL, split = TRUE, draw.plot = TRUE)
 
 ds.chisqr(rvar="D$sex", cvar="D$has_asthma", stvar="D$lsoa11cd",
           exclude=NULL,	useNA ="no", suppress.chisq.warnings=FALSE,
-          datasources=NULL, names_region = "Liverpool",
+          datasources=conns, names_region = "Liverpool",
           force.nfilter=NULL, split = TRUE, draw.plot = FALSE)
 
 ```
 
-age/continous variable can’t be tested here (develop t-test?)
 
 ## 2. Effect of distance to greenspace
 
 #### Is greenspace distance associated with asthma?
+
 This is a function from dsbase.
+
 ```{r, eval=FALSE}
-ds.glm(formula="has_asthma ~ greenspace_distance",family="binomial",datasources=connections
-)
+
+ds.glm(formula = "has_asthma ~ distance_local_greenspace", data = "D", 
+       family="binomial", datasources=conns)
+
 ```
 
 
 #### Does the association remain after accounting for individual characteristics?
 This is a function from dsbase.
 ```{r, eval=FALSE}
-ds.glm(formula=paste("has_asthma ~ greenspace_distance +","age + sex + ethnicity + imd_decile"
-  ),family="binomial",datasources=connections
-)
+ds.glm(formula=paste("has_asthma ~ distance_local_greenspace + sex"), 
+        data = "D", family="binomial",datasources=conns)
 ```
 
 
 ### 3. Accounting for geographical clustering
 
 #### Question 3.1 — Is greenspace associated with asthma after accounting for LSOA clustering?
+Is distance to local greenspace associated with the probability of having asthma, while allowing baseline asthma risk to differ between LSOAs?
 This is a function from dsbase which is based on glmer: a function from package lme4.
+
 ```{r, eval=FALSE}
-ds.glmerSLMA(formula="has_asthma ~ greenspace_distance + (1|lsoa11cd)",
+ds.glmerSLMA(formula="has_asthma ~ distance_local_greenspace + (1 | lsoa11cd)",
              family="binomial",
              dataName = "D",
-             datasources=conns
+             datasources=conns[1]
              )
 ```
 
+### 4. Grouped glm
+Could return coef for model fit within each lsoa and plot coef on map. 
+Not sure if needed, likely not used in Rukun's analysis
 

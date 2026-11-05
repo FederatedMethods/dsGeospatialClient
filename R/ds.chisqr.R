@@ -1,131 +1,208 @@
-#' Calculate chi-squared statistics for grouped contingency tables
+#' Calculate Chi-Squared Statistics for Grouped Contingency Tables
 #'
 #' @description
-#' Calculates Pearson's chi-squared tests for two categorical variables
-#' separately across the levels of a third grouping variable. The analysis
-#' can be performed separately for each DataSHIELD datasource or after
-#' combining contingency-table counts across datasources.
+#' Calculates Pearson's chi-squared tests of independence between two
+#' categorical variables separately across the levels of a third grouping
+#' variable. The analysis can be performed independently for each
+#' DataSHIELD datasource or by combining contingency-table counts
+#' across datasources.
 #'
-#' Optionally, when the grouping variable contains 2011 LSOA codes, the
-#' chi-squared statistics can be joined to LSOA boundary data and returned
-#' as spatial data or plotted as maps.
+#' Optionally, when the grouping variable contains 2011 Lower Layer
+#' Super Output Area (LSOA) codes, chi-squared statistics can be
+#' joined to geographical boundaries and returned as spatially
+#' matched data or visualised as choropleth maps.
 #'
 #' @details
-#' `ds.chisqr()` constructs three-dimensional contingency tables from
-#' `rvar`, `cvar`, and `stvar`. The `rvar` argument defines the rows of
-#' each contingency table, `cvar` defines the columns, and `stvar`
-#' identifies the groups for which separate two-dimensional contingency
-#' tables and chi-squared tests are produced.
+#' The function constructs three-dimensional contingency tables using
+#' \code{rvar}, \code{cvar}, and \code{stvar}. The first two variables
+#' define the rows and columns of each contingency table, while
+#' \code{stvar} identifies the groups for which separate chi-squared
+#' tests are performed.
 #'
-#' For example, if `rvar` represents sex, `cvar` represents asthma status,
-#' and `stvar` represents LSOA, a separate contingency table and Pearson's
-#' chi-squared test are calculated for each LSOA.
+#' For example, if \code{rvar} represents sex, \code{cvar} represents
+#' asthma status, and \code{stvar} represents LSOA, a separate
+#' chi-squared test is performed within each LSOA to assess the
+#' association between sex and asthma status.
 #'
-#' Variables supplied to `rvar`, `cvar`, and `stvar` may be numeric,
-#' integer, or factor variables. Their levels are identified on the
-#' server side before constructing tables with a consistent structure
-#' across the participating datasources.
+#' The function does not test whether associations differ
+#' significantly between groups.
 #'
-#' When `split = TRUE`, chi-squared tests are calculated independently
-#' for each datasource. When `split = FALSE`, cell counts are first
-#' combined across the valid datasources and the chi-squared tests are
-#' calculated from the combined contingency tables.
+#' The row, column and grouping variables are treated as categorical
+#' variables. Numeric, integer and factor variables may be used,
+#' provided their levels can be identified by the server-side
+#' \code{asFactorDS3()} function. Numeric values are treated as
+#' distinct categories rather than continuous measurements.
 #'
-#' The returned chi-squared statistics are calculated using
-#' [stats::chisq.test()]. For every level of `stvar`, the output includes
-#' the chi-squared statistic, degrees of freedom, p-value, and datasource.
+#' Variable levels are identified across the participating datasources
+#' to construct contingency tables with a consistent structure.
+#' Contingency-table counts are calculated on the DataSHIELD servers
+#' using \code{tableDS()}.
 #'
-#' If `names_region` is supplied, LSOA boundaries are obtained using
-#' `boundr::bounds()` and matched against the levels of `stvar`. Only
-#' LSOAs occurring within the requested region or regions are included.
-#'
-#' When `draw.plot = TRUE` and valid region names have been supplied,
-#' the chi-squared statistics are displayed geographically using
-#' [ggplot2::geom_sf()]. Separate maps are faceted by datasource when
-#' `split = TRUE`.
-#'
-#' As with the underlying DataSHIELD table functionality, contingency
-#' tables remain subject to the server-side disclosure-control settings.
-#' A datasource that fails the relevant table checks is excluded from
-#' the analysis and reported in the validity information.
-#'
-#' @param rvar Character string specifying the name of the variable defining
-#'   the rows of each two-dimensional contingency table.
-#'
-#' @param cvar Character string specifying the name of the variable defining
-#'   the columns of each two-dimensional contingency table.
-#'
-#' @param stvar Character string specifying the grouping variable defining
-#'   the separate two-dimensional contingency tables. For spatial output,
-#'   this should contain 2011 LSOA codes corresponding to the selected
-#'   boundary data.
-#'
-#' @param exclude Levels to exclude when constructing the contingency
-#'   tables. This argument is passed to the server-side table operation.
-#'   See [base::table()] for details of the interaction between `exclude`
-#'   and `useNA`.
-#'
-#' @param useNA Character string specifying whether missing values should
-#'   be included in the contingency tables. Accepted values are `"no"`
-#'   and `"always"`. Default is `"always"`.
-#'
-#' @param suppress.chisq.warnings Logical. If `TRUE`, warnings generated
-#'   by [stats::chisq.test()], for example warnings concerning small
-#'   expected cell counts, are suppressed. Default is `FALSE`.
-#'
-#' @param datasources A list of `DSConnection-class` objects obtained after
-#'   login. If `NULL`, the function searches for available DataSHIELD
-#'   connections using `datashield.connections_find()`.
-#'
-#' @param force.nfilter Optional character string specifying an integer
-#'   value used to increase the server-side `nfilter.tab` disclosure
-#'   threshold. The value can only increase, and not decrease, the
-#'   disclosure-control threshold configured by the data custodian.
-#'
-#' @param names_region Optional character vector containing the names of
-#'   regions used to obtain 2011 LSOA boundaries. When `split = TRUE`,
-#'   region names correspond to the participating datasources. When
-#'   `split = FALSE`, only one region is used.
-#'
-#' @param split Logical. If `TRUE`, chi-squared tests are calculated
-#'   separately for each datasource. If `FALSE`, counts are combined
-#'   across datasources before calculating the chi-squared tests.
-#'   Default is `TRUE`.
-#'
-#' @param draw.plot Logical. If `TRUE` and valid `names_region` have been
-#'   supplied, returns a faceted spatial plot of the chi-squared
-#'   statistics. If `FALSE` and valid regions are supplied, the spatially
-#'   matched results are returned as a data frame without geometry.
-#'   Default is `TRUE`.
-#'
-#' @return
-#' The return value depends on `split`, `names_region`, and `draw.plot`.
-#'
-#' When no valid region information is supplied, a data frame is returned
-#' containing:
-#'
+#' Two analysis modes are supported:
 #' \itemize{
-#'   \item `lsoa11cd` - level of the grouping variable (`stvar`);
-#'   \item `X.squared` - Pearson's chi-squared statistic;
-#'   \item `df` - degrees of freedom;
-#'   \item `p.value` - p-value of the chi-squared test;
-#'   \item `datasource` - datasource name, or `"COMBINED"` when
-#'     `split = FALSE`.
+#'   \item \code{split = TRUE}: Chi-squared tests are calculated
+#'   independently for each valid datasource and grouping level.
+#'   \item \code{split = FALSE}: Contingency-table counts are
+#'   combined across valid datasources before calculating the
+#'   chi-squared tests for each grouping level.
 #' }
 #'
-#' If valid `names_region` are supplied and `draw.plot = FALSE`, the same
-#' results are returned after matching them to the selected LSOA
-#' boundaries.
+#' Pearson's chi-squared tests are performed using
+#' \code{stats::chisq.test()}. For 2 x 2 contingency tables,
+#' Yates' continuity correction is applied by default.
 #'
-#' If valid `names_region` are supplied and `draw.plot = TRUE`, a
-#' `ggplot` object containing maps of `X.squared` is returned, faceted
-#' by datasource.
+#' For each grouping level, the function calculates the chi-squared
+#' statistic, degrees of freedom and p-value.
 #'
-#' If all participating studies fail the server-side table checks, a list
-#' containing `validity.message` and `error.messages` is returned.
+#' All contingency tables are subject to DataSHIELD disclosure-control
+#' settings. Datasources that fail the server-side table checks are
+#' excluded from the analysis. If all datasources fail, the function
+#' returns validity information and error messages instead of
+#' chi-squared statistics.
+#'
+#' Disclosure-control validation does not guarantee that the
+#' statistical assumptions of Pearson's chi-squared test are
+#' satisfied. Small expected cell frequencies may affect the
+#' reliability of the chi-squared approximation. Warnings generated
+#' by \code{stats::chisq.test()} can optionally be suppressed using
+#' \code{suppress.chisq.warnings}.
+#'
+#' When \code{names_region} is supplied, 2011 LSOA boundaries are
+#' retrieved using \code{boundr::bounds()}. The grouping levels are
+#' matched to the selected geographical boundaries, and the
+#' corresponding chi-squared statistics can be returned as a
+#' spatially matched data frame or visualised using
+#' \code{ggplot2::geom_sf()}.
+#'
+#' When \code{split = TRUE}, separate maps are produced for each
+#' datasource. When \code{split = FALSE}, the combined chi-squared
+#' statistics are displayed geographically.
+#'
+#' @param rvar Character string specifying the name of the variable
+#'   defining the rows of each contingency table. The variable is
+#'   treated as categorical.
+#'
+#' @param cvar Character string specifying the name of the variable
+#'   defining the columns of each contingency table. The variable is
+#'   treated as categorical.
+#'
+#' @param stvar Character string specifying the grouping variable
+#'   defining separate contingency tables. For geographical analysis,
+#'   this should contain 2011 LSOA codes corresponding to the
+#'   selected boundary data.
+#'
+#' @param exclude Levels to exclude when constructing contingency
+#'   tables. Default is \code{NULL}. Passed to the server-side
+#'   table operation. See \code{base::table()} for details.
+#'
+#' @param useNA Character string specifying whether missing values
+#'   should be included in contingency tables. Accepted values are
+#'   \code{"no"} (default) and \code{"always"}.
+#'
+#' @param suppress.chisq.warnings Logical. If \code{TRUE}, warnings
+#'   generated by \code{stats::chisq.test()}, including warnings
+#'   concerning small expected cell frequencies, are suppressed.
+#'   Default is \code{FALSE}.
+#'
+#' @param datasources A list of \code{DSConnection} objects
+#'   representing the connected DataSHIELD studies. If \code{NULL},
+#'   available connections are obtained using
+#'   \code{datashield.connections_find()}.
+#'
+#' @param force.nfilter Optional character string specifying an
+#'   integer value used to increase the server-side
+#'   \code{nfilter.tab} disclosure-control threshold.
+#'   The threshold cannot be reduced below the value configured
+#'   by the data custodian. Default is \code{NULL}.
+#'
+#' @param names_region Optional character vector specifying local
+#'   authority district names used to retrieve 2011 LSOA boundaries.
+#'   Default is \code{NULL}.
+#'
+#'   When \code{split = TRUE}, region names are assigned to
+#'   datasources in their order. If the number of region names
+#'   differs from the number of datasources, the supplied names
+#'   are repeated.
+#'
+#'   When \code{split = FALSE}, only the first supplied region name
+#'   is used if multiple names are provided.
+#'
+#' @param split Logical. If \code{TRUE} (default), chi-squared tests
+#'   are calculated separately for each datasource. If \code{FALSE},
+#'   contingency-table counts are combined across datasources
+#'   before calculating the tests.
+#'
+#' @param draw.plot Logical. If \code{TRUE} (default) and valid
+#'   \code{names_region} values are supplied, returns a choropleth
+#'   map of the chi-squared statistics. If \code{FALSE}, returns
+#'   the results as a data frame.
+#'
+#'   If no valid geographical region is supplied, plotting is
+#'   disabled and tabular results are returned.
+#'
+#' @return
+#' The return value depends on \code{split}, \code{names_region}
+#' and \code{draw.plot}.
+#'
+#' When no valid geographical region is supplied, a data frame
+#' is returned containing:
+#' \describe{
+#'   \item{lsoa11cd}{Level of the grouping variable
+#'     (\code{stvar}).}
+#'   \item{X.squared}{Pearson's chi-squared test statistic.}
+#'   \item{df}{Degrees of freedom of the chi-squared test.}
+#'   \item{p.value}{P-value of the chi-squared test.}
+#'   \item{datasource}{Name of the datasource, or
+#'     \code{"COMBINED"} when \code{split = FALSE}.}
+#' }
+#'
+#' If valid \code{names_region} values are supplied and
+#' \code{draw.plot = FALSE}, the results are matched to the
+#' selected LSOA boundaries and returned as a data frame
+#' without geometry. LSOAs without corresponding test results
+#' may contain missing values.
+#'
+#' If valid \code{names_region} values are supplied and
+#' \code{draw.plot = TRUE}, a \code{ggplot} object containing
+#' choropleth maps of the chi-squared statistics is returned,
+#' faceted by datasource.
+#'
+#' If all participating datasources fail the server-side
+#' disclosure-control checks, a list containing
+#' \code{validity.message} and \code{error.messages} is returned.
+#'
+#' If contingency tables across datasources have incompatible
+#' dimensions, or their levels cannot be aligned, the function
+#' may return a character warning message.
+#'
 #'
 #' @examples
 #' \dontrun{
+#' library(DSOpal)
+#' library(dsBase)
+#' library(dsBaseClient)
+#' 
+#' 
+#' builder <- DSI::newDSLoginBuilder()
+#' 
+#' builder$append(server = "study1", 
+#'                url = "http://localhost:8880", 
+#'                user = "administrator", 
+#'                password = "password", 
+#'                table = "UPRN.greenspace_distance_metrics", 
+#'                profile = "ds-geospatial")
+#' 
+#' builder$append(server = "study2", 
+#'                url = "http://localhost:8880", 
+#'                user = "administrator", 
+#'                password = "password", 
+#'                table = "UPRN.greenspace_distance_metrics", 
+#'                profile = "ds-geospatial")
+#' 
+#' logindata <- builder$build()
+#' 
+#' conns <- DSI::datashield.login(logins = logindata, assign = TRUE, symbol = "D")
+#' 
 #' # Calculate chi-squared statistics separately for each datasource
 #' ds.chisqr(
 #'   rvar = "D$sex",
@@ -163,7 +240,7 @@
 #' @export
 #' 
 ds.chisqr <- function(rvar=NULL, cvar=NULL, stvar=NULL, exclude=NULL,	
-                      useNA ="always", suppress.chisq.warnings=FALSE, 
+                      useNA ="no", suppress.chisq.warnings=FALSE, 
                       datasources=NULL, force.nfilter=NULL, names_region = NULL, 
                       split = TRUE, draw.plot = TRUE){
   
