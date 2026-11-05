@@ -79,7 +79,20 @@
 #'
 #' @seealso
 #' \code{plotSpatialDS()}
-#'
+#'ds.plotSpatial(
+#' D = "D",
+#' study = "study_object",
+#' mapping = "mapping_object",
+#' pos = "pos_object",
+#' basemap = "basemap_object",
+#' area = "east",
+#' case_var = "case",
+#' k = 5,
+#' xmin = 334000, 
+#' ymin = 388500, 
+#' xmax = 339000, 
+#' ymax = 393500, 
+#' datasources = conns)
 #' @export
 #' 
 ds.plotSpatial <- function(
@@ -100,18 +113,23 @@ ds.plotSpatial <- function(
   
   # Select the requested area
   
-  window <- c(xmin, ymin, xmax, ymax)
+  window <- c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
   view <- window + c(-1000, -1000, 1000, 1000)
   
   
-  calltext <- paste0("plotSpatialDS(", D, ",", study, ",",mapping, ",", pos, ",", 
-                     basemap, ",", area ,",", case_var, ",", k," )")
-  
+  calltext <- paste0(
+    "plotSpatialDS(", D, ",", study, ",", mapping, ",", pos, ",",
+    basemap, ",",
+    encodeString(area, quote = '"'), ",",
+    encodeString(case_var, quote = '"'), ",",
+    k, ")"
+  )
+
   output <- DSI::datashield.aggregate(datasources, as.symbol(calltext))
   
-  basemap <- output$basemap
-  cases <- output$cases
-  negatives <- output$negatives
+  basemap <- output[[1]]$basemap
+  cases <- output[[1]]$cases
+  negatives <- output[[1]]$negatives
   
   # 5. Plot on basemap
   
@@ -146,3 +164,5 @@ ds.plotSpatial <- function(
   
   return(p)
 }
+
+
