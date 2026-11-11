@@ -2,7 +2,7 @@
 % Please edit documentation in R/ds.groupcor.R
 \name{ds.groupcor}
 \alias{ds.groupcor}
-\title{Calculates the correlation of R objects in the server-side}
+\title{Calculate Grouped Pearson Correlations Across DataSHIELD Studies}
 \usage{
 ds.groupcor(
   x = NULL,
@@ -11,97 +11,173 @@ ds.groupcor(
   type = "split",
   datasources = NULL,
   do.checks = TRUE,
-  names_region = "Liverpool",
-  draw.plot = TRUE
+  names_region = list("Liverpool"),
+  draw.plot = FALSE
 )
 }
 \arguments{
-\item{x}{a character string providing the name of the input vector, data frame or matrix.}
+\item{x}{Character string specifying the name of the first
+numerical variable on the DataSHIELD server.}
 
-\item{y}{a character string providing the name of the input vector, data frame or matrix.
-Default NULL.}
+\item{y}{Character string specifying the name of the second
+numerical variable on the DataSHIELD server.}
 
-\item{type}{a character string that represents the type of analysis to carry out.
-This must be set to \code{'split'} or \code{'combine'}.  Default \code{'split'}. For more information see details.}
+\item{index}{Character string specifying the grouping variable,
+typically containing LSOA geographical identifiers.}
 
-\item{datasources}{a list of \code{\link[DSI]{DSConnection-class}} objects obtained after login.
-If the \code{datasources} argument is not specified
-the default set of connections will be used: see \code{\link[DSI]{datashield.connections_default}}.}
+\item{type}{Character string specifying the analysis mode.
+Either \code{"split"} (default), which returns study-specific
+correlations, or \code{"combine"}, which calculates pooled
+correlations across studies.}
+
+\item{datasources}{A list of \code{DSConnection} objects
+representing the connected DataSHIELD studies. If \code{NULL},
+connections are obtained using
+\code{datashield.connections_find()}.}
+
+\item{do.checks}{Logical. If \code{TRUE} (default), checks whether
+the input variables are defined in the connected studies and
+invokes class checks for \code{x} and \code{y}.}
+
+\item{names_region}{A list of character vectors specifying local
+authority district names for geographical boundary retrieval.
+For \code{type = "combine"}, a list of length one is expected.
+For \code{type = "split"}, one list element per datasource is
+expected. The function signature defaults to \code{"Liverpool"},
+but a list must be supplied to pass input validation.}
+
+\item{draw.plot}{Logical. If \code{TRUE} (default), returns a
+choropleth map of correlation coefficients. If \code{FALSE},
+returns a data frame containing the calculated correlations.}
 }
 \value{
-\code{ds.cor} returns a list containing the number of missing values in each variable,
-the number of missing variables casewise, the correlation matrix,
-the number of used complete cases. The function applies two disclosure controls. The first disclosure
-control checks that the number of variables is not bigger than a percentage of the individual-level records (the allowed
-percentage is pre-specified by the 'nfilter.glm'). The second disclosure control checks that none of them is dichotomous
-with a level having fewer counts than the pre-specified 'nfilter.tab' threshold.
+If \code{draw.plot = FALSE}, returns a data frame containing:
+\describe{
+\item{lsoa11cd}{LSOA geographical identifier.}
+\item{complete.counts}{Number of complete observation pairs
+used to calculate the correlation.}
+\item{correlation.coef}{Pearson correlation coefficient between
+the two numerical variables.}
+\item{server}{Name of the contributing DataSHIELD study, or
+\code{"combine"} for pooled results.}
+}
+
+In split mode, the returned data frame also includes geographical
+boundary information as an \code{sf} object.
+
+If \code{draw.plot = TRUE}, returns a \code{ggplot} object
+displaying correlation coefficients across LSOAs, faceted
+by study or combined result.
 }
 \description{
-This function calculates the correlation of two variables or the correlation
-matrix for the variables of an input data frame.
+Calculates Pearson correlation coefficients between two numerical
+variables within geographical groups across one or more DataSHIELD
+studies. Correlations can be calculated separately for each study
+or combined across studies using aggregated summary statistics.
+Results can be returned as a table or visualised as choropleth maps
+using Lower Layer Super Output Area (LSOA) boundaries.
 }
 \details{
-In addition to computing correlations; this function produces a table outlining the
-number of complete cases and a table outlining the number of missing values to allow the
-user to decide the 'relevance' of the correlation based on the number of complete
-cases included in the correlation calculations.
+The function calls the server-side function \code{groupcorDS()} to
+obtain aggregated statistics required for calculating correlations
+without transferring individual-level data to the client.
 
-If the argument \code{y} is not NULL, the dimensions of the object have to be
-compatible with the argument \code{x}.
+Pearson correlation coefficients are calculated from covariance
+matrices constructed using sums of products, sums of variables
+and complete-case observation counts. The covariance matrices
+are converted to correlation matrices using \code{stats::cov2cor()}.
 
-The function calculates the pairwise correlations based on casewise complete cases which means that
-it omits all the rows in the input data frame that include at least one cell with a missing value,
-before the calculation of correlations.
+Two analysis modes are supported:
+\itemize{
+\item \code{"split"}: Calculates correlation coefficients
+independently for each study and geographical group.
+\item \code{"combine"}: Combines aggregated sufficient statistics
+across studies for each common geographical group before
+calculating the correlation coefficient.
+}
 
-If \code{type} is set to \code{'split'} (default), the correlation of two variables or the
-variance-correlation matrix of an input data frame and the number of complete cases and missing
-values are returned for every single study. If type is set to \code{'combine'}, the pooled
-correlation, the total number of complete cases and the total number of missing values aggregated
-from all the involved studies, are returned.
+In combined mode, the function pools sums of products, variable
+sums and complete-case counts across studies. This produces a
+correlation based on the combined observations rather than an
+average of study-specific correlation coefficients.
 
-Server function called: \code{corDS}
+The function is intended for numerical variables, including
+continuous, discrete and binary numerical variables. Character
+variables and unordered categorical variables are not suitable
+for direct Pearson correlation analysis. The grouping variable
+can represent categorical geographical identifiers such as LSOAs.
+
+For combined analysis, only LSOAs present in all connected studies
+are included. The number of common LSOAs must satisfy the
+disclosure-control threshold obtained from the server.
+
+When geographical plotting is enabled, 2011 LSOA boundaries are
+retrieved using \code{boundr}. Correlation coefficients are joined
+to the corresponding geographical boundaries and displayed using
+\code{ggplot2}.
+
+The region name \code{"Cheshire Merseyside"} is automatically
+expanded into its constituent local authority districts.
 }
 \examples{
 \dontrun{
+library(DSOpal)
+library(dsBase)
+library(dsBaseClient)
 
-## Version 6, for version 5 see the Wiki
-  # Connecting to the Opal servers
 
-  require('DSI')
-  require('DSOpal')
-  require('dsBaseClient')
+builder <- DSI::newDSLoginBuilder()
 
-  builder <- DSI::newDSLoginBuilder()
-  builder$append(server = "study1",
-                 url = "http://192.168.56.100:8080/",
-                 user = "administrator", password = "datashield_test&",
-                 table = "CNSIM.CNSIM1", driver = "OpalDriver")
-  builder$append(server = "study2",
-                 url = "http://192.168.56.100:8080/",
-                 user = "administrator", password = "datashield_test&",
-                 table = "CNSIM.CNSIM2", driver = "OpalDriver")
-  builder$append(server = "study3",
-                 url = "http://192.168.56.100:8080/",
-                 user = "administrator", password = "datashield_test&",
-                 table = "CNSIM.CNSIM3", driver = "OpalDriver")
-  logindata <- builder$build()
+builder$append(server = "study1",
+               url = "http://localhost:8880",
+               user = "administrator",
+               password = "password",
+               table = "UPRN.greenspace_distance_metrics",
+               profile = "grove")
 
-  # Log onto the remote Opal training servers
-  connections <- DSI::datashield.login(logins = logindata, assign = TRUE, symbol = "D")
+builder$append(server = "study2",
+               url = "http://localhost:8880",
+               user = "administrator",
+               password = "password",
+               table = "UPRN.greenspace_distance_metrics",
+               profile = "grove")
 
-  # Example 1: Get the correlation matrix of two continuous variables
-  ds.cor(x="D$LAB_TSC", y="D$LAB_TRIG", type="combine", datasources = connections)
+logindata <- builder$build()
 
-  # Example 2: Get the correlation matrix of the variables in a dataframe
-  ds.dataFrame(x=c("D$LAB_TSC", "D$LAB_TRIG", "D$LAB_HDL", "D$PM_BMI_CONTINUOUS"),
-               newobj="D.new", check.names=FALSE, datasources=connections)
-  ds.cor("D.new", type="combine", datasources = connections)
+conns <- DSI::datashield.login(logins = logindata, assign = TRUE, symbol = "D")
 
-  # clear the Datashield R sessions and logout
-  datashield.logout(connections)
+# Calculate study-specific correlations
+result <- ds.groupcor(
+  x = "D$has_asthma", y = "D$distance_local_greenspace",
+  index = "D$lsoa11cd",
+  type = "split",
+  names_region = list("Liverpool", "Sefton"),
+  draw.plot = FALSE
+)
+
+# Calculate combined correlations across studies
+combined <- ds.groupcor(
+  x = "D$has_asthma", y = "D$distance_local_greenspace",
+  index = "D$lsoa11cd",
+  type = "combine",
+  names_region = list(c("Liverpool", "Sefton")),
+  draw.plot = FALSE
+)
+
+# Visualise combined correlations
+map <- ds.groupcor(
+  x = "D$has_asthma", y = "D$distance_local_greenspace",
+  index = "D$lsoa11cd",
+  type = "combine",
+  names_region = list("Liverpool"),
+  draw.plot = TRUE
+)
+print(map)
+}
 
 }
-}
-\author{
-DataSHIELD Development Team
+\seealso{
+\code{\link[stats]{cor}},
+\code{\link[stats]{cov2cor}},
+\code{\link[DSI]{datashield.aggregate}}
 }

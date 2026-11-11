@@ -2,7 +2,7 @@
 % Please edit documentation in R/ds.lmSLX.R
 \name{ds.lmSLX}
 \alias{ds.lmSLX}
-\title{Calculate Moran's I}
+\title{Fit a Spatial Lag of X (SLX) Regression Model}
 \usage{
 ds.lmSLX(
   formula = NULL,
@@ -14,36 +14,65 @@ ds.lmSLX(
 )
 }
 \arguments{
-\item{listw}{Character string specifying the name of the spatial weights
-object of class \code{listw} on the server.}
+\item{formula}{An R formula specifying the dependent variable and
+explanatory variables.}
 
-\item{type}{Character string specifying the output format. Currently only
-\code{"split"} is supported.}
+\item{data}{Character string specifying the name of the data frame
+on the DataSHIELD servers.}
 
-\item{do.checks}{Logical. If \code{TRUE}, checks that the input objects are
-defined and have consistent classes across the studies.}
+\item{listw}{Character string specifying the name of a server-side
+spatial weights object of class \code{listw}.}
 
-\item{datasources}{A list of \code{DSConnection} objects. If \code{NULL},
-active DataSHIELD connections are used.}
+\item{type}{Character string specifying how results are returned.
+Currently, only \code{"split"} is supported. Defaults to
+\code{"split"}.}
 
-\item{x}{Character string specifying the name of the numeric vector on the
-server to be analysed.}
+\item{do.checks}{Logical. If \code{TRUE}, checks whether the spatial
+weights object exists on the DataSHIELD servers and retrieves its
+class. Defaults to \code{TRUE}.}
 
-\item{vars}{Optional variable specification. Currently unused.}
-
-\item{nsim}{Numeric value specifying the number of simulations used for
-calculating the Monte Carlo p-value. Default is 199.}
+\item{datasources}{A list of \code{DSConnection} objects representing
+the DataSHIELD connections. If \code{NULL}, existing connections
+are retrieved using \code{datashield.connections_find()}.}
 }
 \value{
-A named list with one element per study. Each study contains a
-named numeric vector with:
-\itemize{
-\item \code{moran_I}: Moran's I statistic.
-\item \code{z}: standardised Moran's I statistic.
-\item \code{p_mc}: Monte Carlo p-value.
-}
+A named list containing results from each DataSHIELD server.
+When \code{type = "split"}, each server's output is converted
+to a vector using \code{unlist()}.
+
+If the server-side disclosure checks pass, the results contain
+estimated regression coefficients, including coefficients for
+spatially lagged explanatory variables.
+
+If the disclosure checks fail, the server returns information
+about the failed checks instead of fitting the model.
 }
 \description{
-Calculates Moran's I for a numeric variable using a spatial weights
-object across one or more DataSHIELD studies.
+Fits a Spatial Lag of X (SLX) regression model on DataSHIELD servers
+using the server-side function \code{lmSLXDS()}. The function
+estimates the association between an outcome and both local and
+neighbouring explanatory variables without transferring individual-level
+data to the client.
+}
+\details{
+The SLX model incorporates spatially lagged explanatory variables
+and is defined as:
+
+\deqn{y = X\beta + WX\theta + \epsilon}
+
+where \eqn{y} is the dependent variable, \eqn{X} is the matrix of
+explanatory variables, \eqn{W} is the spatial weights matrix,
+\eqn{\beta} represents the coefficients of local explanatory variables,
+and \eqn{\theta} represents the coefficients of spatially lagged
+explanatory variables.
+
+The function calls \code{lmSLXDS()} on each DataSHIELD server,
+where disclosure checks are applied before fitting the model using
+\code{spatialreg::lmSLX()}.
+
+Currently, only \code{type = "split"} is supported, returning
+results separately for each server.
+}
+\seealso{
+\code{\link[spatialreg]{lmSLX}}
 }
