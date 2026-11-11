@@ -22,7 +22,7 @@ devtools::build()
 mv ../../dsGeospatial_0.0.0.9000.tar.gz .
 
 # Build the custom Rock image.
-docker build   --platform linux/amd64   -t ds-geospatial-rock:0.0.0.9000   .
+docker build   --platform linux/amd64   -t rock-grove:0.0.0.9000   .
 docker compose up -d --force-recreate
 
 # Verify that the containers are running.
@@ -207,14 +207,14 @@ builder$append(server = "study1",
                user = "administrator", 
                password = "password", 
                table = "UPRN.greenspace_distance_metrics", 
-               profile = "ds-geospatial")
+               profile = "grove")
 
 builder$append(server = "study2", 
                url = "http://localhost:8880", 
                user = "administrator", 
                password = "password", 
                table = "UPRN.greenspace_distance_metrics", 
-               profile = "ds-geospatial")
+               profile = "grove")
 
 logindata <- builder$build()
 
@@ -267,7 +267,7 @@ To upload the Merseyside demonstration data to your local Opal instance, follow 
 
 
 Step 2.2: Configure the DataSHIELD connection (lines 155–166)
-Update the connection parameters to use your local Opal instance and the ds-geospatial profile:
+Update the connection parameters to use your local Opal instance and the `grove` profile:
 
 ```{r}
 ## 2.1 Connect ----
@@ -281,11 +281,11 @@ builder$append(
   user = "administrator",
   password = "password",
   driver = "OpalDriver",
-  profile = "ds-geospatial"
+  profile = "grove"
 )
 ```
 
-Ensure that your Docker containers are running and that the ds-geospatial profile 
+Ensure that your Docker containers are running and that the `grove` profile 
 has been activated and initialised in Opal.Then execute the script from R:
 
 ```{r}

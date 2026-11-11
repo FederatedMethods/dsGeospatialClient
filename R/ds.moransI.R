@@ -35,9 +35,9 @@
 #'   user = "administrator",
 #'   password = "password",
 #'   driver = "OpalDriver",
-#'   profile = "ds-geospatial"
+#'   profile = "grove"
 #' )
-#' 
+#'
 #' logindata <- builder$build()
 #' conns <- DSI::datashield.login(logins = logindata)
 #' DSI::datashield.assign.resource(
@@ -56,7 +56,7 @@
 #'   symbol = "cells_resource",
 #'   resource = paste0(project, ".cells")
 #' )
-#' 
+#'
 #' DSI::datashield.assign.expr(
 #'   conns,
 #'   symbol = "cells_object",
@@ -78,63 +78,75 @@
 #'   symbol = "W_band800",
 #'   expr = quote(W_object$band800)
 #' )
-#' 
+#'
 #' ds.moransI(
 #'   x = "obesity_qof_2024_25",
 #'   listw = "W_band800",
 #'   nsim = 199,
 #'   datasources = conns
 #' )
-#' 
+#'
 #'
 #' @export
 
-ds.moransI <- function(x = NULL, listw = NULL, type='split',
-                       vars = NULL, do.checks = TRUE,
-                       nsim = 199, datasources=NULL){
-  
+ds.moransI <- function(
+  x = NULL,
+  listw = NULL,
+  type = 'split',
+  vars = NULL,
+  do.checks = TRUE,
+  nsim = 199,
+  datasources = NULL
+) {
   # look for DS connections
-  if(is.null(datasources)){
+  if (is.null(datasources)) {
     datasources <- datashield.connections_find()
   }
-  
+
   # ensure datasources is a list of DSConnection-class
-  if(!(is.list(datasources) && all(unlist(lapply(datasources, function(d) {methods::is(d,"DSConnection")}))))){
-    stop("The 'datasources' were expected to be a list of DSConnection-class objects", call.=FALSE)
-  }
-  
-  if(is.null(x)){
-    stop("Please provide the input vector 'x', a numeric!", call.=FALSE)
-  }
-  
-  if(is.null(listw)){
-    stop("Please provide the input vector 'listw'!, a list object", call.=FALSE)
+  if (
+    !(is.list(datasources) &&
+      all(unlist(lapply(datasources, function(d) {
+        methods::is(d, "DSConnection")
+      }))))
+  ) {
+    stop(
+      "The 'datasources' were expected to be a list of DSConnection-class objects",
+      call. = FALSE
+    )
   }
 
-  if(do.checks){
-    
+  if (is.null(x)) {
+    stop("Please provide the input vector 'x', a numeric!", call. = FALSE)
+  }
+
+  if (is.null(listw)) {
+    stop(
+      "Please provide the input vector 'listw'!, a list object",
+      call. = FALSE
+    )
+  }
+
+  if (do.checks) {
     # check if the input objects are defined in all the studies
     isDefined(datasources, x)
     isDefined(datasources, listw)
-    
+
     # call the internal function that checks the input object is of the same class in all studies.
     typ1 <- checkClass(datasources, x)
     typ2 <- checkClass(datasources, listw)
   }
-  
-  if(!is.numeric(nsim) & length(nsim != 1)){
+
+  if (!is.numeric(nsim) & length(nsim != 1)) {
     stop("nsim should be numeric of length 1")
   }
   calltext <- paste0("MoransI(", x, ", ", listw, ", ", nsim, ")")
 
   output <- DSI::datashield.aggregate(datasources, as.symbol(calltext))
-  
-  ## Only type split supported now 
-  if(type == "split"){
-  
+
+  ## Only type split supported now
+  if (type == "split") {
     result <- lapply(output, function(x) unlist(x))
-  return(result)
+    return(result)
   }
 }
-
-

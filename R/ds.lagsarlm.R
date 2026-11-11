@@ -1,5 +1,5 @@
 # library(spatialreg)
-# 
+#
 # model <- lagsarlm(
 #   obesity_qof_2024_25 ~ dist_food_fastfood + dist_food_supermarket + dist_hc_emergency,
 #   data = cells,
@@ -7,7 +7,7 @@
 #   zero.policy = TRUE,
 #   method = "Matrix"
 # )
-# 
+#
 #' Calculate Moran's I
 #'
 #' Calculates Moran's I for a numeric variable using a spatial weights
@@ -45,9 +45,9 @@
 #'   user = "administrator",
 #'   password = "password",
 #'   driver = "OpalDriver",
-#'   profile = "ds-geospatial"
+#'   profile = "grove"
 #' )
-#' 
+#'
 #' logindata <- builder$build()
 #' conns <- DSI::datashield.login(logins = logindata)
 #' DSI::datashield.assign.resource(
@@ -66,7 +66,7 @@
 #'   symbol = "cells_resource",
 #'   resource = paste0(project, ".cells")
 #' )
-#' 
+#'
 #' DSI::datashield.assign.expr(
 #'   conns,
 #'   symbol = "cells_object",
@@ -88,61 +88,80 @@
 #'   symbol = "W_band800",
 #'   expr = quote(W_object$band800)
 #' )
-#' 
+#'
 #' ds.moransI(
 #'   x = "obesity_qof_2024_25",
 #'   listw = "W_band800",
 #'   nsim = 199,
 #'   datasources = conns
 #' )
-#' 
+#'
 #'
 #' @export
 
-ds.lagsarlm <- function(formula = NULL, data = NULL, listw = NULL, type='split',
-                       do.checks = TRUE,
-                       datasources=NULL){
-  
+ds.lagsarlm <- function(
+  formula = NULL,
+  data = NULL,
+  listw = NULL,
+  type = 'split',
+  do.checks = TRUE,
+  datasources = NULL
+) {
   # look for DS connections
-  if(is.null(datasources)){
+  if (is.null(datasources)) {
     datasources <- datashield.connections_find()
   }
-  
+
   # ensure datasources is a list of DSConnection-class
-  if(!(is.list(datasources) && all(unlist(lapply(datasources, function(d) {methods::is(d,"DSConnection")}))))){
-    stop("The 'datasources' were expected to be a list of DSConnection-class objects", call.=FALSE)
+  if (
+    !(is.list(datasources) &&
+      all(unlist(lapply(datasources, function(d) {
+        methods::is(d, "DSConnection")
+      }))))
+  ) {
+    stop(
+      "The 'datasources' were expected to be a list of DSConnection-class objects",
+      call. = FALSE
+    )
   }
-  
-  if(is.null(formula)){
-    stop("Please provide the input formula!", call.=FALSE)
+
+  if (is.null(formula)) {
+    stop("Please provide the input formula!", call. = FALSE)
   }
-  
-  if(is.null(listw)){
-    stop("Please provide the input vector 'listw'!, a list object", call.=FALSE)
+
+  if (is.null(listw)) {
+    stop(
+      "Please provide the input vector 'listw'!, a list object",
+      call. = FALSE
+    )
   }
-  
-  if(do.checks){
-    
+
+  if (do.checks) {
     # check if the input objects are defined in all the studies
     #isDefined(datasources, x)
     isDefined(datasources, listw)
-    
+
     # call the internal function that checks the input object is of the same class in all studies.
     #typ1 <- checkClass(datasources, x)
     typ2 <- checkClass(datasources, listw)
   }
 
-  
-  calltext <- paste0("lagsarlmDS(", deparse(formula), ", ", listw, ", ", data, ")", collapse = "")
-  
+  calltext <- paste0(
+    "lagsarlmDS(",
+    deparse(formula),
+    ", ",
+    listw,
+    ", ",
+    data,
+    ")",
+    collapse = ""
+  )
+
   output <- DSI::datashield.aggregate(datasources, as.symbol(calltext))
-  
-  ## Only type split supported now 
-  if(type == "split"){
-    
+
+  ## Only type split supported now
+  if (type == "split") {
     result <- lapply(output, function(x) unlist(x))
     return(result)
   }
 }
-
-

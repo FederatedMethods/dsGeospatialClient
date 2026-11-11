@@ -124,9 +124,9 @@
 #'   user = "administrator",
 #'   password = "password",
 #'   driver = "OpalDriver",
-#'   profile = "ds-geospatial"
+#'   profile = "grove"
 #' )
-#' 
+#'
 #' logindata <- builder$build()
 #' conns <- DSI::datashield.login(logins = logindata)
 #' DSI::datashield.assign.resource(
@@ -145,7 +145,7 @@
 #'   symbol = "cells_resource",
 #'   resource = paste0(project, ".cells")
 #' )
-#' 
+#'
 #' DSI::datashield.assign.expr(
 #'   conns,
 #'   symbol = "cells_object",
@@ -167,7 +167,7 @@
 #'   symbol = "W_band800",
 #'   expr = quote(W_object$band800)
 #' )
-#' 
+#'
 #'ds.weigen(
 #'   x = "cells_object",
 #'   weights = "knn",
@@ -179,47 +179,65 @@
 #'
 #' @export
 
-ds.weigen <- function(x = NULL, weights = "knn", 
-                      k = 4, threshold = 0.25, 
-                      enum = 100, type='split',
-                      do.checks = TRUE,
-                      datasources=NULL){
-  
+ds.weigen <- function(
+  x = NULL,
+  weights = "knn",
+  k = 4,
+  threshold = 0.25,
+  enum = 100,
+  type = 'split',
+  do.checks = TRUE,
+  datasources = NULL
+) {
   # look for DS connections
-  if(is.null(datasources)){
+  if (is.null(datasources)) {
     datasources <- datashield.connections_find()
   }
-  
+
   # ensure datasources is a list of DSConnection-class
-  if(!(is.list(datasources) && all(unlist(lapply(datasources, function(d) {methods::is(d,"DSConnection")}))))){
-    stop("The 'datasources' were expected to be a list of DSConnection-class objects", call.=FALSE)
+  if (
+    !(is.list(datasources) &&
+      all(unlist(lapply(datasources, function(d) {
+        methods::is(d, "DSConnection")
+      }))))
+  ) {
+    stop(
+      "The 'datasources' were expected to be a list of DSConnection-class objects",
+      call. = FALSE
+    )
   }
-  
-  if(is.null(x)){
-    stop("Please provide the input vector 'x', an sf object!", call.=FALSE)
+
+  if (is.null(x)) {
+    stop("Please provide the input vector 'x', an sf object!", call. = FALSE)
   }
-  
-  
-  
-  if(do.checks){
-    
+
+  if (do.checks) {
     # check if the input objects are defined in all the studies
     isDefined(datasources, x)
 
     # call the internal function that checks the input object is of the same class in all studies.
     typ1 <- checkClass(datasources, x)
   }
-  
 
-  calltext <- paste0("weigenDS(", x, ", ", shQuote(weights), ", ", k, ", ", threshold, ",", enum, ")")
-  
+  calltext <- paste0(
+    "weigenDS(",
+    x,
+    ", ",
+    shQuote(weights),
+    ", ",
+    k,
+    ", ",
+    threshold,
+    ",",
+    enum,
+    ")"
+  )
+
   output <- DSI::datashield.aggregate(datasources, as.symbol(calltext))
-  
-  ## Only type split supported now 
-  if(type == "split"){
+
+  ## Only type split supported now
+  if (type == "split") {
     result <- output
     return(result)
   }
 }
-
-

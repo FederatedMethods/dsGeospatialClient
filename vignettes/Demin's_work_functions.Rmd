@@ -13,28 +13,27 @@ builder$append(
   user = "administrator",
   password = "password",
   driver = "OpalDriver",
-  profile = "ds-geospatial"
+  profile = "grove"
 )
 ```
 
 ```{r}
 logindata <- builder$build()
 conns <- DSI::datashield.login(logins = logindata)
-
 ```
 
 
 ```{r}
 DSI::datashield.assign.resource(
-conns,
-symbol = "cells",
-resource = paste0(project, ".", "cells")
+  conns,
+  symbol = "cells",
+  resource = paste0(project, ".", "cells")
 )
 
 DSI::datashield.assign.resource(
-conns,
-symbol = "W",
-resource = paste0(project, ".", "W_D_5km")
+  conns,
+  symbol = "W",
+  resource = paste0(project, ".", "W_D_5km")
 )
 ```
 
