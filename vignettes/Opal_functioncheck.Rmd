@@ -33,7 +33,7 @@ docker ps
 ## Configure Opal:
 ```{r}
 # 1. Open http://localhost:8880.
-# 2. Navigate to Administration → Apps and register the Rock host. http://rock-geospatial:8085
+# 2. Navigate to Administration → Apps and register the Rock host. http://rock-grove:8085
 # 3. Navigate to Administration → R and verify the profile.
 # 4. Navigate to Administration → DataSHIELD and activate/initialise the profile.
 
