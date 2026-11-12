@@ -80,7 +80,7 @@
 #' @seealso
 #' \code{plotSpatialDS()}
 #'ds.plotSpatial(
-#' D = "D",
+#' D = "D_object",
 #' study = "study_object",
 #' mapping = "mapping_object",
 #' pos = "pos_object",
@@ -132,7 +132,7 @@ ds.plotSpatial <- function(
   negatives <- output[[1]]$negatives
   
   # 5. Plot on basemap
-  
+ 
   bar_x <- view[["xmin"]] + 300
   bar_y <- view[["ymin"]] + 300
   
